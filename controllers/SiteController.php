@@ -472,7 +472,7 @@ class SiteController extends Controller
                 $historicoPrecio = new HistoricoPreciosDolar();
                 $historicoPrecio->precio_ves = $nuevoPrecio;
                 $historicoPrecio->setTipoToOficial();
-                $historicoPrecio->created_at = date('Y-m-d H:i:s');
+                // created_at will be set automatically by TimestampBehavior
 
                 if (!$historicoPrecio->save()) {
                     throw new \Exception('Error al guardar el nuevo precio: ' . implode(', ', $historicoPrecio->getFirstErrors()));
@@ -536,7 +536,7 @@ class SiteController extends Controller
             $historicoPrecio = new HistoricoPreciosDolar();
             $historicoPrecio->precio_ves = $nuevoPrecio;
             $historicoPrecio->setTipoToParalelo();
-            $historicoPrecio->created_at = date('Y-m-d H:i:s');
+            // created_at will be set automatically by TimestampBehavior
 
             if (!$historicoPrecio->save()) {
                 throw new \Exception('Error al guardar el nuevo precio paralelo: ' . implode(', ', $historicoPrecio->getFirstErrors()));

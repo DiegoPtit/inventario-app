@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
+use yii\db\Expression;
 
 /**
  * This is the model class for table "historico_precios_dolar".
@@ -14,6 +16,20 @@ use Yii;
  */
 class HistoricoPreciosDolar extends \yii\db\ActiveRecord
 {
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            [
+                'class' => TimestampBehavior::class,
+                'createdAtAttribute' => 'created_at',
+                'updatedAtAttribute' => false, // No updated_at field
+                'value' => new Expression('NOW()'),
+            ],
+        ];
+    }
 
     /**
      * ENUM field values
