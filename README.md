@@ -1,233 +1,318 @@
 <p align="center">
-    <a href="https://github.com/yiisoft" target="_blank">
-        <img src="https://avatars0.githubusercontent.com/u/993323" height="100px">
-    </a>
-    <h1 align="center">Yii 2 Basic Project Template</h1>
+    <img src="web/uploads/Logos/ico_01-10-2025.png" height="100px" alt="Hava Inventario Logo">
+    <h1 align="center">Hava Inventario</h1>
     <br>
 </p>
 
-Yii 2 Basic Project Template is a skeleton [Yii 2](https://www.yiiframework.com/) application best for
-rapidly creating small projects.
+**Hava Inventario** es un sistema completo de gestión de inventarios desarrollado con [Yii 2](https://www.yiiframework.com/), diseñado para pequeñas y medianas empresas que necesitan un control eficiente de sus productos, ventas, clientes y facturación.
 
-The template contains the basic features including user login/logout and a contact page.
-It includes all commonly used configurations that would allow you to focus on adding new
-features to your application.
+El sistema incluye funcionalidades avanzadas como punto de venta (POS), gestión de clientes, control de stock en múltiples ubicaciones, facturación, seguimiento de cobros, y conversión de monedas con precios del dólar actualizables.
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/yiisoft/yii2-app-basic.svg)](https://packagist.org/packages/yiisoft/yii2-app-basic)
-[![Total Downloads](https://img.shields.io/packagist/dt/yiisoft/yii2-app-basic.svg)](https://packagist.org/packages/yiisoft/yii2-app-basic)
-[![build](https://github.com/yiisoft/yii2-app-basic/workflows/build/badge.svg)](https://github.com/yiisoft/yii2-app-basic/actions?query=workflow%3Abuild)
+## 🚀 Características Principales
 
-DIRECTORY STRUCTURE
--------------------
+- **📦 Gestión de Productos**: Control completo de inventario con códigos de barras, categorías, imágenes y precios
+- **🏪 Sistema POS**: Punto de venta integrado con facturación en tiempo real
+- **👥 Gestión de Clientes**: Control de clientes con seguimiento de estado (solvente/moroso)
+- **📊 Control de Stock**: Manejo de inventario en múltiples ubicaciones/almacenes
+- **💰 Facturación**: Sistema completo de facturas con items detallados
+- **📈 Seguimiento de Cobros**: Control de cuentas por cobrar y pagos
+- **💵 Conversión de Monedas**: Precios del dólar oficial y paralelo actualizables
+- **📋 Histórico de Movimientos**: Registro completo de entradas, salidas y ventas
+- **🔐 Autenticación Google**: Login con Google OAuth además de usuarios locales
+- **📱 Interfaz Moderna**: Diseño responsive y amigable al usuario
 
-      assets/             contains assets definition
-      commands/           contains console commands (controllers)
-      config/             contains application configurations
-      controllers/        contains Web controller classes
-      mail/               contains view files for e-mails
-      models/             contains model classes
-      runtime/            contains files generated during runtime
-      tests/              contains various tests for the basic application
-      vendor/             contains dependent 3rd-party packages
-      views/              contains view files for the Web application
-      web/                contains the entry script and Web resources
+## 📁 Estructura del Proyecto
 
-
-
-REQUIREMENTS
-------------
-
-The minimum requirement by this project template that your Web server supports PHP 7.4.
-
-
-INSTALLATION
-------------
-
-### Install via Composer
-
-If you do not have [Composer](https://getcomposer.org/), you may install it by following the instructions
-at [getcomposer.org](https://getcomposer.org/doc/00-intro.md#installation-nix).
-
-You can then install this project template using the following command:
-
-~~~
-composer create-project --prefer-dist yiisoft/yii2-app-basic basic
-~~~
-
-Now you should be able to access the application through the following URL, assuming `basic` is the directory
-directly under the Web root.
-
-~~~
-http://localhost/basic/web/
-~~~
-
-### Install from an Archive File
-
-Extract the archive file downloaded from [yiiframework.com](https://www.yiiframework.com/download/) to
-a directory named `basic` that is directly under the Web root.
-
-Set cookie validation key in `config/web.php` file to some random secret string:
-
-```php
-'request' => [
-    // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
-    'cookieValidationKey' => '<secret random string goes here>',
-],
+```
+inventario-app/
+├── assets/             # Definiciones de assets CSS/JS
+├── commands/           # Comandos de consola
+├── config/             # Configuraciones de la aplicación
+│   ├── db.php         # Configuración de base de datos
+│   ├── web.php        # Configuración principal
+│   └── google-credentials.php # Credenciales OAuth Google
+├── controllers/        # Controladores de la aplicación
+│   ├── ProductosController.php    # Gestión de productos
+│   ├── ClientesController.php     # Gestión de clientes
+│   ├── FacturasController.php     # Gestión de facturas
+│   ├── PosController.php          # Sistema punto de venta
+│   ├── EntradasController.php     # Control de entradas
+│   ├── SalidasController.php      # Control de salidas
+│   └── ...
+├── models/             # Modelos de datos (ActiveRecord)
+│   ├── Productos.php              # Modelo de productos
+│   ├── Clientes.php               # Modelo de clientes
+│   ├── Facturas.php               # Modelo de facturas
+│   ├── Stock.php                  # Modelo de inventario
+│   ├── HistoricoMovimientos.php   # Histórico de movimientos
+│   └── ...
+├── views/              # Vistas de la aplicación
+│   ├── productos/     # Vistas de productos
+│   ├── clientes/      # Vistas de clientes
+│   ├── facturas/      # Vistas de facturas
+│   ├── pos/           # Vista del sistema POS
+│   └── ...
+├── web/                # Archivos web públicos
+│   ├── uploads/       # Archivos subidos (imágenes de productos)
+│   └── assets/        # Assets compilados
+└── widgets/            # Widgets personalizados
+    └── DollarPriceWidget.php # Widget de precios del dólar
 ```
 
-You can then access the application through the following URL:
-
-~~~
-http://localhost/basic/web/
-~~~
 
 
-### Install with Docker
+## 🔧 Requisitos del Sistema
 
-Update your vendor packages
-
-    docker-compose run --rm php composer update --prefer-dist
-    
-Run the installation triggers (creating cookie validation code)
-
-    docker-compose run --rm php composer install    
-    
-Start the container
-
-    docker-compose up -d
-    
-You can then access the application through the following URL:
-
-    http://127.0.0.1:8000
-
-**NOTES:** 
-- Minimum required Docker engine version `17.04` for development (see [Performance tuning for volume mounts](https://docs.docker.com/docker-for-mac/osxfs-caching/))
-- The default configuration uses a host-volume in your home directory `.docker-composer` for composer caches
+- **PHP**: >= 7.4.0
+- **Base de datos**: MySQL/MariaDB
+- **Servidor web**: Apache/Nginx
+- **Extensiones PHP requeridas**:
+  - PDO MySQL
+  - GD (para manejo de imágenes)
+  - cURL (para autenticación Google)
+  - OpenSSL
+  - Mbstring
 
 
-CONFIGURATION
--------------
+## 🚀 Instalación
 
-### Database
+### 1. Clonar el Repositorio
 
-Edit the file `config/db.php` with real data, for example:
+```bash
+git clone [URL_DEL_REPOSITORIO] hava-inventario
+cd hava-inventario
+```
+
+### 2. Instalar Dependencias
+
+Si no tienes [Composer](https://getcomposer.org/), instálalo siguiendo las instrucciones en [getcomposer.org](https://getcomposer.org/doc/00-intro.md#installation-nix).
+
+```bash
+composer install
+```
+
+### 3. Configurar Base de Datos
+
+1. Crea una base de datos MySQL/MariaDB
+2. Edita el archivo `config/db.php` con tus datos de conexión:
 
 ```php
 return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'mysql:host=localhost;dbname=yii2basic',
-    'username' => 'root',
-    'password' => '1234',
+    'dsn' => 'mysql:host=localhost;dbname=hava_inventario',
+    'username' => 'tu_usuario',
+    'password' => 'tu_contraseña',
     'charset' => 'utf8',
 ];
 ```
 
-**NOTES:**
-- Yii won't create the database for you, this has to be done manually before you can access it.
-- Check and edit the other files in the `config/` directory to customize your application as required.
-- Refer to the README in the `tests` directory for information specific to basic application tests.
+### 4. Configurar Autenticación Google (Opcional)
 
+1. Copia el archivo de ejemplo: `cp config/google-credentials.example.php config/google-credentials.php`
+2. Configura tus credenciales de Google OAuth siguiendo la guía en `GOOGLE_AUTH_SETUP.md`
 
-TESTING
--------
+### 5. Configurar Permisos
 
-Tests are located in `tests` directory. They are developed with [Codeception PHP Testing Framework](https://codeception.com/).
-By default, there are 3 test suites:
+```bash
+# En sistemas Unix/Linux
+chmod 777 runtime web/assets web/uploads
+chmod 755 yii
+```
 
-- `unit`
-- `functional`
-- `acceptance`
+### 6. Acceder a la Aplicación
 
-Tests can be executed by running
+Configura tu servidor web para que apunte al directorio `web/` y accede a:
 
 ```
+http://localhost/hava-inventario/web/
+```
+
+
+### 7. Instalación con Docker (Alternativa)
+
+Si prefieres usar Docker:
+
+```bash
+# Actualizar dependencias
+docker-compose run --rm php composer update --prefer-dist
+
+# Ejecutar instalación
+docker-compose run --rm php composer install    
+
+# Iniciar contenedores
+docker-compose up -d
+```
+
+Accede a la aplicación en: `http://127.0.0.1:8000`
+
+**Notas Docker:**
+- Versión mínima requerida: Docker Engine `17.04`
+- La configuración usa un volumen host en `.docker-composer` para caché de composer
+
+
+## ⚙️ Configuración
+
+### Configuración Inicial de Usuarios
+
+Después de la instalación, crea los usuarios iniciales ejecutando desde la consola:
+
+```php
+// Crear usuario administrador
+use app\models\Usuarios;
+$admin = Usuarios::createUser('admin', 'admin123', 'Administrador', 1);
+
+// Crear usuario demo
+$demo = Usuarios::createUser('demo', 'demo123', 'Usuario Demo', 0);
+```
+
+### Estructura de Base de Datos
+
+El sistema requiere las siguientes tablas principales:
+
+- **usuarios**: Gestión de usuarios del sistema
+- **productos**: Catálogo de productos
+- **clientes**: Base de datos de clientes
+- **facturas**: Registro de facturas
+- **items_factura**: Detalles de items por factura
+- **stock**: Control de inventario por ubicación
+- **entradas**: Registro de entradas de mercancía
+- **salidas**: Registro de salidas de mercancía
+- **historico_movimientos**: Histórico completo de movimientos
+- **historico_cobros**: Seguimiento de cobros y pagos
+- **lugares**: Ubicaciones/almacenes
+- **categorias**: Categorías de productos
+- **proveedores**: Base de datos de proveedores
+- **historico_precios_dolar**: Precios históricos del dólar
+
+### Configuración de Autenticación Google
+
+Para habilitar el login con Google, consulta la documentación detallada en `GOOGLE_AUTH_SETUP.md`.
+
+**NOTAS:**
+- La base de datos debe crearse manualmente antes de acceder a la aplicación
+- Revisa y edita los archivos en el directorio `config/` según tus necesidades
+- Consulta la documentación en el directorio `tests/` para información sobre pruebas
+
+
+## 🎯 Funcionalidades del Sistema
+
+### 📦 Gestión de Productos
+- **Catálogo completo**: Marca, modelo, color, SKU, descripción
+- **Control de precios**: Costo y precio de venta
+- **Códigos de barras**: Identificación única por producto
+- **Imágenes**: Hasta 10 fotos por producto
+- **Categorización**: Organización por categorías
+- **Ubicaciones**: Control por almacén/lugar
+- **Stock automático**: Creación de inventario inicial
+
+### 🏪 Sistema POS (Punto de Venta)
+- **Interfaz intuitiva**: Búsqueda rápida de productos
+- **Facturación en tiempo real**: Generación automática de facturas
+- **Gestión de clientes**: Selección y seguimiento de clientes
+- **Control de stock**: Actualización automática del inventario
+- **Conversión de monedas**: Precios en bolívares y dólares
+- **Edición de facturas**: Modificación con registro de devoluciones
+
+### 👥 Gestión de Clientes
+- **Base de datos completa**: Información detallada de clientes
+- **Estados de cuenta**: Solvente/Moroso automático
+- **Histórico de compras**: Seguimiento de transacciones
+- **Cuentas por cobrar**: Control de deudas pendientes
+
+### 📊 Control de Inventario
+- **Stock por ubicación**: Inventario separado por almacén
+- **Entradas y salidas**: Registro detallado de movimientos
+- **Histórico completo**: Trazabilidad de todos los movimientos
+- **Reportes de inventario**: Valorización y cantidades
+- **Alertas de stock**: Control de productos con bajo inventario
+
+### 💰 Sistema de Facturación
+- **Facturas detalladas**: Items con precios y cantidades
+- **Códigos únicos**: Numeración automática
+- **Múltiples monedas**: Soporte para bolívares y dólares
+- **Histórico de cobros**: Seguimiento de pagos
+- **Estados de factura**: Pendiente/Pagada/Parcial
+
+### 📈 Reportes y Análisis
+- **Dashboard principal**: Resumen ejecutivo del negocio
+- **Valor del inventario**: Cálculo automático del valor total
+- **Análisis de clientes**: Proporción solventes vs morosos
+- **Histórico de precios**: Seguimiento del dólar oficial y paralelo
+- **Movimientos detallados**: Registro completo de transacciones
+
+## 🧪 Pruebas
+
+Las pruebas están ubicadas en el directorio `tests/` y están desarrolladas con [Codeception PHP Testing Framework](https://codeception.com/).
+
+Por defecto, hay 3 suites de pruebas:
+- `unit`: Pruebas unitarias de componentes
+- `functional`: Pruebas de interacción del usuario  
+- `acceptance`: Pruebas en navegador real (deshabilitadas por defecto)
+
+### Ejecutar Pruebas
+
+```bash
+# Ejecutar todas las pruebas
 vendor/bin/codecept run
-```
 
-The command above will execute unit and functional tests. Unit tests are testing the system components, while functional
-tests are for testing user interaction. Acceptance tests are disabled by default as they require additional setup since
-they perform testing in real browser. 
+# Solo pruebas unitarias y funcionales
+vendor/bin/codecept run unit,functional
 
-
-### Running  acceptance tests
-
-To execute acceptance tests do the following:  
-
-1. Rename `tests/acceptance.suite.yml.example` to `tests/acceptance.suite.yml` to enable suite configuration
-
-2. Replace `codeception/base` package in `composer.json` with `codeception/codeception` to install full-featured
-   version of Codeception
-
-3. Update dependencies with Composer 
-
-    ```
-    composer update  
-    ```
-
-4. Download [Selenium Server](https://www.seleniumhq.org/download/) and launch it:
-
-    ```
-    java -jar ~/selenium-server-standalone-x.xx.x.jar
-    ```
-
-    In case of using Selenium Server 3.0 with Firefox browser since v48 or Google Chrome since v53 you must download [GeckoDriver](https://github.com/mozilla/geckodriver/releases) or [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/downloads) and launch Selenium with it:
-
-    ```
-    # for Firefox
-    java -jar -Dwebdriver.gecko.driver=~/geckodriver ~/selenium-server-standalone-3.xx.x.jar
-    
-    # for Google Chrome
-    java -jar -Dwebdriver.chrome.driver=~/chromedriver ~/selenium-server-standalone-3.xx.x.jar
-    ``` 
-    
-    As an alternative way you can use already configured Docker container with older versions of Selenium and Firefox:
-    
-    ```
-    docker run --net=host selenium/standalone-firefox:2.53.0
-    ```
-
-5. (Optional) Create `yii2basic_test` database and update it by applying migrations if you have them.
-
-   ```
-   tests/bin/yii migrate
-   ```
-
-   The database configuration can be found at `config/test_db.php`.
-
-
-6. Start web server:
-
-    ```
-    tests/bin/yii serve
-    ```
-
-7. Now you can run all available tests
-
-   ```
-   # run all available tests
-   vendor/bin/codecept run
-
-   # run acceptance tests
-   vendor/bin/codecept run acceptance
-
-   # run only unit and functional tests
-   vendor/bin/codecept run unit,functional
-   ```
-
-### Code coverage support
-
-By default, code coverage is disabled in `codeception.yml` configuration file, you should uncomment needed rows to be able
-to collect code coverage. You can run your tests and collect coverage with the following command:
-
-```
-#collect coverage for all tests
+# Con cobertura de código
 vendor/bin/codecept run --coverage --coverage-html --coverage-xml
-
-#collect coverage only for unit tests
-vendor/bin/codecept run unit --coverage --coverage-html --coverage-xml
-
-#collect coverage for unit and functional tests
-vendor/bin/codecept run functional,unit --coverage --coverage-html --coverage-xml
 ```
 
-You can see code coverage output under the `tests/_output` directory.
+La salida de cobertura se encuentra en `tests/_output/`.
+
+## 📚 Documentación Adicional
+
+El proyecto incluye documentación detallada en archivos específicos:
+
+- **`FORMULARIO_PRODUCTOS.md`**: Guía completa del formulario de productos y gestión de imágenes
+- **`GOOGLE_AUTH_SETUP.md`**: Configuración paso a paso de autenticación con Google OAuth
+- **`MIGRACION_USUARIOS.md`**: Documentación del sistema de usuarios y migración
+- **`REGISTRO_DEVOLUCIONES.md`**: Funcionalidad de devoluciones en edición de facturas
+- **`PRUEBAS_DEVOLUCIONES.md`**: Casos de prueba para el sistema de devoluciones
+
+## 🔐 Seguridad
+
+- **Autenticación robusta**: Sistema de usuarios con encriptación segura
+- **Validación de datos**: Validaciones tanto en cliente como servidor
+- **Protección CSRF**: Tokens de validación en formularios
+- **Subida segura de archivos**: Validación de tipos y tamaños de imagen
+- **Transacciones de BD**: Integridad de datos garantizada
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Framework**: Yii 2.0.45
+- **Frontend**: Bootstrap 5, jQuery, CSS3
+- **Base de datos**: MySQL/MariaDB con Active Record
+- **Autenticación**: Yii Auth + Google OAuth 2.0
+- **Subida de archivos**: Yii UploadedFile
+- **Testing**: Codeception Framework
+
+## 🤝 Contribución
+
+Para contribuir al proyecto:
+
+1. Fork el repositorio
+2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crea un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia BSD-3-Clause. Ver el archivo `LICENSE.md` para más detalles.
+
+## 📞 Soporte
+
+Para soporte técnico o consultas sobre el sistema:
+
+- Revisa la documentación en los archivos `.md` del proyecto
+- Consulta los issues existentes en el repositorio
+- Crea un nuevo issue para reportar bugs o solicitar features
+
+---
+
+**Hava Inventario** - Sistema completo de gestión de inventarios desarrollado con ❤️ usando Yii Framework.
