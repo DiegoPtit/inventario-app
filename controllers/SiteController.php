@@ -216,19 +216,16 @@ class SiteController extends Controller
             return strcmp($fechaB, $fechaA);
         });
         
-        // Obtener valor de inventario desde el registro más reciente de histórico
-        $historicoReciente = HistoricoInventarios::find()
-            ->orderBy(['fecha_cierre' => SORT_DESC])
-            ->one();
-        
-        $valorInventario = $historicoReciente ? $historicoReciente->valor : 0;
+        // Obtener valor de inventario como la SUMA de TODOS los cierres registrados
+        // Esto representa la inversión total acumulada a lo largo del tiempo
+        $valorInventario = HistoricoInventarios::find()->sum('valor') ?: 0;
         
         // Valor recaudado es la suma de todos los cobros
         $valorRecaudado = $cobrosCerradas;
         
-        // Calcular proporción de deuda vs recaudado
-        // Deuda = Valor del inventario (dinero invertido aún no recuperado)
-        // Recaudado = Total de cobros realizados
+        // Calcular proporción de inversión vs recaudado
+        // Inversión = Suma de todos los inventarios cerrados (dinero invertido acumulado)
+        // Recaudado = Total de cobros realizados (retorno de la inversión)
         $proporcionDeuda = $valorInventario;
         $proporcionRecaudado = $valorRecaudado;
         

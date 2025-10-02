@@ -1229,7 +1229,7 @@ $this->registerCss('
                                         <span class="conversion-line"><strong>$<?= number_format($valorInventarioUsdOficial, 2) ?></strong> (BCV)</span>
                                     </div>
                                 <?php endif; ?>
-                                <p class="text-muted mt-2">Valor según último registro de inventario</p>
+                                <p class="text-muted mt-2">Inversión total acumulada en todos los inventarios cerrados</p>
                             </div>
                         </div>
                     </div>
