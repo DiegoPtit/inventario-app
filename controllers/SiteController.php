@@ -568,6 +568,152 @@ class SiteController extends Controller
     }
 
     /**
+     * AJAX: Get clients with pending invoices for payment reminder modal
+     *
+     * @return Response
+     */
+    public function actionGetClientesPendientes()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            // Obtener todos los clientes con facturas
+            $clientes = Clientes::find()
+                ->with(['facturas.historicoCobros'])
+                ->all();
+
+            $clientesPendientes = [];
+
+            foreach ($clientes as $cliente) {
+                $facturasPendientes = [];
+                
+                foreach ($cliente->facturas as $factura) {
+                    // Calcular total cobrado de esta factura
+                    $totalCobrado = 0;
+                    foreach ($factura->historicoCobros as $cobro) {
+                        $totalCobrado += $cobro->monto;
+                    }
+                    
+                    // Si la factura tiene saldo pendiente, agregarla
+                    if ($totalCobrado < $factura->monto_final) {
+                        $facturasPendientes[] = [
+                            'id' => $factura->id,
+                            'codigo' => $factura->codigo,
+                            'concepto' => $factura->concepto,
+                            'monto_final' => $factura->monto_final,
+                            'total_pagado' => $totalCobrado,
+                            'saldo_pendiente' => $factura->monto_final - $totalCobrado,
+                            'fecha' => $factura->fecha,
+                        ];
+                    }
+                }
+                
+                // Si el cliente tiene facturas pendientes, agregarlo a la lista
+                if (!empty($facturasPendientes)) {
+                    $clientesPendientes[] = [
+                        'id' => $cliente->id,
+                        'nombre' => $cliente->nombre,
+                        'telefono' => $cliente->telefono,
+                        'status' => $cliente->status,
+                        'facturas' => $facturasPendientes,
+                    ];
+                }
+            }
+
+            return [
+                'success' => true,
+                'data' => $clientesPendientes
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Error al obtener clientes pendientes: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * AJAX: Close payment reminder modal and update user record
+     *
+     * @return Response
+     */
+    public function actionCerrarModalCobros()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            if (Yii::$app->user->isGuest) {
+                throw new \Exception('Usuario no autenticado');
+            }
+
+            $usuario = Usuarios::findOne(Yii::$app->user->id);
+            
+            if (!$usuario) {
+                throw new \Exception('Usuario no encontrado');
+            }
+
+            $usuario->modalClosed = '1';
+            $usuario->dateModalClosed = date('Y-m-d H:i:s');
+
+            if (!$usuario->save(false)) {
+                throw new \Exception('Error al guardar la información del usuario');
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Modal cerrado correctamente'
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * AJAX: Reset modal closed status if date has changed
+     *
+     * @return Response
+     */
+    public function actionResetModalCobros()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            if (Yii::$app->user->isGuest) {
+                throw new \Exception('Usuario no autenticado');
+            }
+
+            $usuario = Usuarios::findOne(Yii::$app->user->id);
+            
+            if (!$usuario) {
+                throw new \Exception('Usuario no encontrado');
+            }
+
+            $usuario->modalClosed = '0';
+            $usuario->dateModalClosed = null;
+
+            if (!$usuario->save(false)) {
+                throw new \Exception('Error al guardar la información del usuario');
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Estado del modal reseteado correctamente'
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Success callback for OAuth authentication
      *
      * @param ClientInterface $client

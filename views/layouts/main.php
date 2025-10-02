@@ -55,7 +55,7 @@ $this->registerCss("body { font-family: 'Montserrat', sans-serif; }");
 </main>
 
 <footer id="footer" class="fixed-bottom shadow-sm fluent-footer" style="height: 80px; z-index: 1029;">
-    <div class="container h-100">
+    <div class="container h-100" style="padding-left: 40px; padding-right: 40px;">
         <div class="d-flex justify-content-between align-items-center h-100">
             <div class="d-flex justify-content-center align-items-center gap-5">
                 <a href="<?= Yii::$app->homeUrl ?>" class="text-decoration-none text-dark">
@@ -65,11 +65,11 @@ $this->registerCss("body { font-family: 'Montserrat', sans-serif; }");
                     <i class="bi bi-list-task fs-4"></i>
                 </a>
                 <?php if (Yii::$app->user->isGuest): ?>
-                    <a href="<?= Yii::$app->urlManager->createUrl(['site/login']) ?>" class="text-decoration-none text-dark">
+                    <a href="<?= Yii::$app->urlManager->createUrl(['site/login']) ?>" class="text-decoration-none text-dark" style="margin-right: 30px;">
                         <i class="bi bi-box-arrow-in-right fs-4"></i>
                     </a>
                 <?php else: ?>
-                    <a href="<?= Yii::$app->urlManager->createUrl(['site/logout']) ?>" class="text-decoration-none text-dark" data-method="post">
+                    <a href="<?= Yii::$app->urlManager->createUrl(['site/logout']) ?>" class="text-decoration-none text-dark" data-method="post" style="margin-right: 30px;">
                         <i class="bi bi-box-arrow-right fs-4"></i>
                     </a>
                 <?php endif; ?>
@@ -278,6 +278,49 @@ $this->registerCss("body { font-family: 'Montserrat', sans-serif; }");
                 </button>
                 <button type="button" class="btn btn-warning" id="btn-confirmar-actualizacion-precio" disabled>
                     <i class="bi bi-check-circle"></i> Actualizar Precio
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Recordatorio de Cobros Pendientes -->
+<div class="modal fade" id="modalRecordatorioCobros" tabindex="-1" aria-labelledby="modalRecordatorioCobrosLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header" style="border-bottom: 2px solid #e9ecef; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="modalRecordatorioCobrosLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Recordatorio: Facturas Pendientes de Pago
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 30px;">
+                <div id="loading-cobros-pendientes" class="text-center py-5">
+                    <div class="spinner-border text-danger" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Cargando clientes con facturas pendientes...</p>
+                </div>
+                
+                <div id="contenido-cobros-pendientes" style="display: none;">
+                    <div class="alert alert-warning d-flex align-items-start gap-3 mb-4" role="alert">
+                        <i class="bi bi-calendar-check-fill fs-4"></i>
+                        <div>
+                            <strong>Recordatorio de Cobros</strong><br>
+                            Los siguientes clientes tienen facturas pendientes de pago. Haz clic en cada cliente para ver sus facturas y gestionar los cobros.
+                        </div>
+                    </div>
+                    
+                    <div class="accordion" id="accordionClientesPendientes">
+                        <!-- Los clientes se cargarán aquí dinámicamente -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="border-top: 2px solid #e9ecef; padding: 20px 30px;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cerrar
                 </button>
             </div>
         </div>
@@ -629,7 +672,126 @@ $this->registerCss("
     font-size: 1.1rem;
     margin-bottom: 5px;
 }
+
+/* Estilos para Modal de Recordatorio de Cobros */
+.cliente-accordion-item {
+    margin-bottom: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.cliente-accordion-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: none;
+}
+
+.cliente-accordion-button {
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 20px;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.cliente-accordion-button:not(.collapsed) {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+    color: #856404;
+}
+
+.cliente-info-badge {
+    font-size: 0.85rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    margin-left: 10px;
+}
+
+.factura-item {
+    background: #f8f9fa;
+    border-left: 4px solid #dc3545;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.factura-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.factura-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.factura-codigo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.factura-status-badge {
+    background: #dc3545;
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.factura-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.factura-detail-item {
+    text-align: center;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+}
+
+.factura-detail-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.factura-detail-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.factura-detail-value.total {
+    color: #dc3545;
+}
+
+.factura-detail-value.pagado {
+    color: #28a745;
+}
+
+.factura-detail-value.pendiente {
+    color: #ffc107;
+}
+
+@media (max-width: 768px) {
+    .factura-details {
+        grid-template-columns: 1fr;
+    }
+}
 ");
+
+// Variables para JavaScript
+$userIsGuest = Yii::$app->user->isGuest;
+$userIdentity = Yii::$app->user->identity;
+$modalClosed = (!$userIsGuest && $userIdentity) ? ($userIdentity->modalClosed ?? '0') : '0';
+$dateModalClosed = (!$userIsGuest && $userIdentity) ? ($userIdentity->dateModalClosed ?? '') : '';
 
 // JavaScript para el modal
 $this->registerJs("
@@ -931,6 +1093,223 @@ if (document.getElementById('modalCierreInventario')) {
         document.getElementById('loading-cierre').style.display = 'block';
         document.getElementById('form-cierre-inventario').style.display = 'none';
     });
+}
+
+// ============================================================
+// MODAL DE RECORDATORIO DE COBROS PENDIENTES
+// ============================================================
+if (document.getElementById('modalRecordatorioCobros')) {
+    
+    // Variables globales para control del modal
+    let modalRecordatorioAbierto = false;
+    
+    // Función para verificar si estamos en una fecha válida para mostrar el modal
+    function esFechaValidaParaModal() {
+        const hoy = new Date();
+        const dia = hoy.getDate();
+        
+        // Días 1, 2, 3 o día 15 de cualquier mes
+        return (dia >= 1 && dia <= 3) || dia === 15;
+    }
+    
+    // Función para obtener la fecha actual en formato Y-m-d
+    function getFechaActual() {
+        const hoy = new Date();
+        const year = hoy.getFullYear();
+        const month = String(hoy.getMonth() + 1).padStart(2, '0');
+        const day = String(hoy.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+    
+    // Función para verificar si el usuario puede ver el modal
+    function puedeVerModal() {
+        const userIsGuest = " . ($userIsGuest ? 'true' : 'false') . ";
+        const modalClosed = '" . $modalClosed . "';
+        const dateModalClosed = '" . $dateModalClosed . "';
+        
+        if (userIsGuest) {
+            return false;
+        }
+        
+        const fechaActual = getFechaActual();
+        
+        // Si el modal fue cerrado hoy, no mostrarlo
+        if (modalClosed === '1' && dateModalClosed) {
+            const fechaCierre = dateModalClosed.split(' ')[0]; // Obtener solo la fecha
+            if (fechaCierre === fechaActual) {
+                return false;
+            }
+        }
+        
+        // Si estamos en una fecha válida, resetear el estado si es necesario
+        if (esFechaValidaParaModal() && modalClosed === '1') {
+            // Resetear el estado del modal
+            fetch('" . \yii\helpers\Url::to(['site/reset-modal-cobros']) . "', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: '" . Yii::$app->request->csrfParam . "=" . Yii::$app->request->csrfToken . "'
+            });
+            return true;
+        }
+        
+        return esFechaValidaParaModal();
+    }
+    
+    // Función para cargar clientes con facturas pendientes
+    function cargarClientesPendientes() {
+        fetch('" . \yii\helpers\Url::to(['site/get-clientes-pendientes']) . "', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                // Renderizar los clientes en el accordion
+                renderClientesPendientes(data.data);
+                
+                // Ocultar loading y mostrar contenido
+                document.getElementById('loading-cobros-pendientes').style.display = 'none';
+                document.getElementById('contenido-cobros-pendientes').style.display = 'block';
+                
+                // Abrir el modal
+                const modal = new bootstrap.Modal(document.getElementById('modalRecordatorioCobros'));
+                modal.show();
+                modalRecordatorioAbierto = true;
+            } else {
+                // No hay clientes pendientes, no mostrar el modal
+                console.log('No hay clientes con facturas pendientes');
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar clientes pendientes:', error);
+        });
+    }
+    
+    // Función para renderizar clientes en el accordion
+    function renderClientesPendientes(clientes) {
+        const accordion = document.getElementById('accordionClientesPendientes');
+        accordion.innerHTML = '';
+        
+        clientes.forEach((cliente, index) => {
+            const clienteId = 'cliente-' + cliente.id;
+            const totalPendiente = cliente.facturas.reduce((sum, f) => sum + parseFloat(f.saldo_pendiente), 0);
+            const statusBadgeClass = cliente.status === 'Moroso' ? 'bg-danger' : 'bg-warning text-dark';
+            
+            const accordionItem = document.createElement('div');
+            accordionItem.className = 'accordion-item cliente-accordion-item';
+            accordionItem.innerHTML = `
+                <h2 class=\"accordion-header cliente-accordion-header\" id=\"heading-\${clienteId}\">
+                    <button class=\"accordion-button cliente-accordion-button collapsed\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapse-\${clienteId}\" aria-expanded=\"false\" aria-controls=\"collapse-\${clienteId}\">
+                        <div class=\"d-flex align-items-center justify-content-between w-100\">
+                            <div class=\"d-flex align-items-center gap-2\">
+                                <i class=\"bi bi-person-fill\"></i>
+                                <span>\${cliente.nombre}</span>
+                                <span class=\"badge \${statusBadgeClass} cliente-info-badge\">\${cliente.status}</span>
+                            </div>
+                            <div class=\"text-end me-3\">
+                                <small class=\"text-muted d-block\">Total Pendiente:</small>
+                                <strong class=\"text-danger\">$\${totalPendiente.toFixed(2)}</strong>
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+                <div id=\"collapse-\${clienteId}\" class=\"accordion-collapse collapse\" aria-labelledby=\"heading-\${clienteId}\" data-bs-parent=\"#accordionClientesPendientes\">
+                    <div class=\"accordion-body\" style=\"padding: 25px;\">
+                        \${renderFacturasCliente(cliente.facturas)}
+                    </div>
+                </div>
+            `;
+            
+            accordion.appendChild(accordionItem);
+        });
+    }
+    
+    // Función para renderizar las facturas de un cliente
+    function renderFacturasCliente(facturas) {
+        let html = '';
+        
+        facturas.forEach(factura => {
+            const facturaUrl = '" . \yii\helpers\Url::to(['facturas/view', 'id' => '__ID__']) . "'.replace('__ID__', factura.id);
+            
+            html += `
+                <div class=\"factura-item\" onclick=\"window.location.href='\${facturaUrl}'\">
+                    <div class=\"factura-header\">
+                        <div class=\"factura-codigo\">
+                            <i class=\"bi bi-receipt\"></i> \${factura.codigo}
+                        </div>
+                        <span class=\"factura-status-badge\">
+                            <i class=\"bi bi-exclamation-circle\"></i> Pendiente
+                        </span>
+                    </div>
+                    
+                    \${factura.concepto ? `<p class=\"text-muted mb-3\"><i class=\"bi bi-file-text me-2\"></i>\${factura.concepto}</p>` : ''}
+                    
+                    <div class=\"factura-details\">
+                        <div class=\"factura-detail-item\">
+                            <div class=\"factura-detail-label\">Monto Total</div>
+                            <div class=\"factura-detail-value total\">$\${parseFloat(factura.monto_final).toFixed(2)}</div>
+                        </div>
+                        <div class=\"factura-detail-item\">
+                            <div class=\"factura-detail-label\">Total Pagado</div>
+                            <div class=\"factura-detail-value pagado\">$\${parseFloat(factura.total_pagado).toFixed(2)}</div>
+                        </div>
+                        <div class=\"factura-detail-item\">
+                            <div class=\"factura-detail-label\">Saldo Pendiente</div>
+                            <div class=\"factura-detail-value pendiente\">$\${parseFloat(factura.saldo_pendiente).toFixed(2)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class=\"text-end mt-3\">
+                        <small class=\"text-muted\">
+                            <i class=\"bi bi-calendar\"></i> Fecha: \${factura.fecha}
+                        </small>
+                    </div>
+                </div>
+            `;
+        });
+        
+        return html;
+    }
+    
+    // Evento cuando se cierra el modal
+    document.getElementById('modalRecordatorioCobros').addEventListener('hidden.bs.modal', function() {
+        if (modalRecordatorioAbierto) {
+            // Marcar el modal como cerrado para este usuario
+            fetch('" . \yii\helpers\Url::to(['site/cerrar-modal-cobros']) . "', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: '" . Yii::$app->request->csrfParam . "=" . Yii::$app->request->csrfToken . "'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Modal cerrado y registrado');
+                }
+            })
+            .catch(error => {
+                console.error('Error al cerrar modal:', error);
+            });
+            
+            modalRecordatorioAbierto = false;
+        }
+    });
+    
+    // Verificar y abrir el modal cuando se carga la página
+    " . (!$userIsGuest && $userIdentity ? "
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            if (puedeVerModal()) {
+                cargarClientesPendientes();
+            }
+        }, 1000); // Esperar 1 segundo después de cargar la página
+    });
+    " : "") . "
 }
 ", \yii\web\View::POS_END);
 ?>

@@ -20,6 +20,8 @@ use yii\web\IdentityInterface;
  * @property string|null $google_access_token
  * @property string $created_at
  * @property string $updated_at
+ * @property string $modalClosed
+ * @property string|null $dateModalClosed
  */
 class Usuarios extends \yii\db\ActiveRecord implements IdentityInterface
 {
@@ -52,6 +54,8 @@ class Usuarios extends \yii\db\ActiveRecord implements IdentityInterface
             [['email'], 'email'],
             [['username'], 'match', 'pattern' => '/^[a-zA-Z0-9_]+$/', 'message' => 'Username can only contain letters, numbers and underscores'],
             [['nombre'], 'string', 'min' => 2, 'max' => 255],
+            [['modalClosed'], 'default', 'value' => '0'],
+            [['dateModalClosed'], 'default', 'value' => null],
         ];
     }
 
@@ -73,6 +77,8 @@ class Usuarios extends \yii\db\ActiveRecord implements IdentityInterface
             'google_access_token' => Yii::t('app', 'Google Access Token'),
             'created_at' => Yii::t('app', 'Created At'),
             'updated_at' => Yii::t('app', 'Updated At'),
+            'modalClosed' => Yii::t('app', 'Modal Closed'),
+            'dateModalClosed' => Yii::t('app', 'Date Modal Closed'),
         ];
     }
 
@@ -85,6 +91,8 @@ class Usuarios extends \yii\db\ActiveRecord implements IdentityInterface
             if ($insert) {
                 $this->generateAuthKey();
                 $this->created_at = date('Y-m-d H:i:s');
+                $this->modalClosed = '0';
+                $this->dateModalClosed = null;
             }
             $this->updated_at = date('Y-m-d H:i:s');
             return true;
