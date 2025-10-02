@@ -74,10 +74,10 @@ class HistoricoInventariosController extends Controller
     {
         $model = $this->findModel($id);
         
-        // Obtener todas las entradas del período
+        // Obtener todas las entradas del período usando datetime completo
         $entradas = Entradas::find()
-            ->where(['>=', 'created_at', $model->fecha_inicio . ' 00:00:00'])
-            ->where(['<=', 'created_at', $model->fecha_cierre . ' 23:59:59'])
+            ->where(['>=', 'created_at', $model->fecha_inicio])
+            ->where(['<=', 'created_at', $model->fecha_cierre])
             ->with(['producto', 'proveedor'])
             ->orderBy(['created_at' => SORT_DESC])
             ->all();
@@ -171,25 +171,27 @@ class HistoricoInventariosController extends Controller
                 ->orderBy(['fecha_cierre' => SORT_DESC])
                 ->one();
             
-            // Determinar fecha de inicio
+            // Determinar fecha-hora de inicio
             if ($ultimoInventario) {
+                // Usar el datetime completo del último cierre
                 $fechaInicio = $ultimoInventario->fecha_cierre;
             } else {
-                // Si no hay inventario cerrado, tomar la fecha más antigua de entradas
+                // Si no hay inventario cerrado, tomar el datetime de la primera entrada
                 $primeraEntrada = Entradas::find()
                     ->orderBy(['created_at' => SORT_ASC])
                     ->one();
                 
-                $fechaInicio = $primeraEntrada ? date('Y-m-d', strtotime($primeraEntrada->created_at)) : date('Y-m-d');
+                $fechaInicio = $primeraEntrada ? $primeraEntrada->created_at : date('Y-m-d H:i:s');
             }
             
-            // Fecha de cierre es la fecha actual
-            $fechaCierre = date('Y-m-d');
+            // Fecha-hora de cierre es el momento actual
+            $fechaCierre = date('Y-m-d H:i:s');
             
             // Calcular cantidad de productos y valor total
+            // Filtrar entradas desde la hora exacta del último cierre hasta ahora
             $entradas = Entradas::find()
-                ->where(['>=', 'created_at', $fechaInicio . ' 00:00:00'])
-                ->where(['<=', 'created_at', $fechaCierre . ' 23:59:59'])
+                ->where(['>=', 'created_at', $fechaInicio])
+                ->where(['<=', 'created_at', $fechaCierre])
                 ->with('producto')
                 ->all();
             

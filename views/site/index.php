@@ -1229,7 +1229,7 @@ $this->registerCss('
                                         <span class="conversion-line"><strong>$<?= number_format($valorInventarioUsdOficial, 2) ?></strong> (BCV)</span>
                                     </div>
                                 <?php endif; ?>
-                                <p class="text-muted mt-2">Inversión total acumulada en todos los inventarios cerrados</p>
+                                <p class="text-muted mt-2">Valor del último período de inventario cerrado</p>
                             </div>
                         </div>
                     </div>
@@ -1313,7 +1313,7 @@ $this->registerCss('
                     <div class="col-md-6">
                         <div class="analytics-card">
                             <div class="analytics-card-header">
-                                <h5 class="analytics-card-title">Proporción: Inventario vs Recaudado</h5>
+                                <h5 class="analytics-card-title">Proporción: Último Inventario vs Recaudado</h5>
                             </div>
                             <div class="analytics-card-body">
                                 <div class="chart-container">
@@ -1324,7 +1324,7 @@ $this->registerCss('
                                     <div class="summary-item">
                                         <div class="summary-label">
                                             <span class="summary-indicator" style="background-color: #ffc107;"></span>
-                                            Valor Invertido (Inventario)
+                                            Inventario (Último Período)
                                         </div>
                                         <div class="summary-value">
                                             $<?= number_format($proporcionDeuda, 2) ?>
@@ -1683,7 +1683,7 @@ $jsPieChart = "
         }
         
         const chartData = {
-            labels: ['Valor Invertido (Inventario)', 'Recaudado'],
+            labels: ['Inventario (Último Período)', 'Recaudado'],
             datasets: [{
                 data: [" . $proporcionDeudaJs . ", " . $proporcionRecaudadoJs . "],
                 backgroundColor: [

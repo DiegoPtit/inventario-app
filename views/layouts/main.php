@@ -358,19 +358,19 @@ $this->registerCss("body { font-family: 'Montserrat', sans-serif; }");
                         <div class="col-md-6">
                             <label class="form-label fw-bold">
                                 <i class="bi bi-calendar-check text-primary"></i>
-                                Fecha de Inicio
+                                Fecha-Hora de Inicio
                             </label>
-                            <input type="date" class="form-control" id="cierre-fecha-inicio" name="fecha_inicio" readonly>
-                            <small class="text-muted">Fecha desde la cual se calculan las entradas</small>
+                            <input type="datetime-local" class="form-control" id="cierre-fecha-inicio" name="fecha_inicio" readonly>
+                            <small class="text-muted">Fecha y hora desde la cual se calculan las entradas</small>
                         </div>
                         
                         <div class="col-md-6">
                             <label class="form-label fw-bold">
                                 <i class="bi bi-calendar-x text-danger"></i>
-                                Fecha de Cierre
+                                Fecha-Hora de Cierre
                             </label>
-                            <input type="date" class="form-control" id="cierre-fecha-cierre" name="fecha_cierre" readonly>
-                            <small class="text-muted">Fecha actual del cierre</small>
+                            <input type="datetime-local" class="form-control" id="cierre-fecha-cierre" name="fecha_cierre" readonly>
+                            <small class="text-muted">Fecha y hora actual del cierre</small>
                         </div>
                     </div>
 
@@ -1005,9 +1005,17 @@ if (document.getElementById('modalCierreInventario')) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Función helper para convertir datetime de PHP a formato datetime-local
+                // De 'YYYY-MM-DD HH:MM:SS' a 'YYYY-MM-DDTHH:MM'
+                function formatDatetimeLocal(datetimeStr) {
+                    if (!datetimeStr) return '';
+                    // Remover los segundos y reemplazar espacio por T
+                    return datetimeStr.substring(0, 16).replace(' ', 'T');
+                }
+                
                 // Llenar el formulario con los datos
-                document.getElementById('cierre-fecha-inicio').value = data.data.fecha_inicio;
-                document.getElementById('cierre-fecha-cierre').value = data.data.fecha_cierre;
+                document.getElementById('cierre-fecha-inicio').value = formatDatetimeLocal(data.data.fecha_inicio);
+                document.getElementById('cierre-fecha-cierre').value = formatDatetimeLocal(data.data.fecha_cierre);
                 document.getElementById('cierre-cantidad').value = data.data.cantidad_productos;
                 document.getElementById('cierre-valor').value = data.data.valor;
                 
@@ -1045,10 +1053,18 @@ if (document.getElementById('modalCierreInventario')) {
         this.disabled = true;
         this.innerHTML = '<span class=\"spinner-border spinner-border-sm me-2\"></span>Registrando...';
         
+        // Función helper para convertir datetime-local a formato MySQL
+        // De 'YYYY-MM-DDTHH:MM' a 'YYYY-MM-DD HH:MM:SS'
+        function formatDatetimeMySQL(datetimeLocalStr) {
+            if (!datetimeLocalStr) return '';
+            // Reemplazar T por espacio y agregar :00 para los segundos
+            return datetimeLocalStr.replace('T', ' ') + ':00';
+        }
+        
         // Preparar datos del formulario
         const formData = new FormData();
-        formData.append('fecha_inicio', document.getElementById('cierre-fecha-inicio').value);
-        formData.append('fecha_cierre', document.getElementById('cierre-fecha-cierre').value);
+        formData.append('fecha_inicio', formatDatetimeMySQL(document.getElementById('cierre-fecha-inicio').value));
+        formData.append('fecha_cierre', formatDatetimeMySQL(document.getElementById('cierre-fecha-cierre').value));
         formData.append('cantidad_productos', document.getElementById('cierre-cantidad').value);
         formData.append('valor', document.getElementById('cierre-valor').value);
         formData.append('nota', document.getElementById('cierre-nota').value);
