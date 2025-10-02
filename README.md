@@ -1,6 +1,6 @@
 <p align="center">
     <img src="web/uploads/Logos/ico_01-10-2025.png" height="100px" alt="Hava Inventario Logo">
-    <h1 align="center">Hava Inventario</h1>
+    <h1 align="center" style="font-weight: bold; background: linear-gradient(135deg, #71ce5d 0%, #2ab693 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Hava Inventario</h1>
     <br>
 </p>
 
