@@ -71,11 +71,17 @@ class ProductosSearch extends Productos
             'contenido_neto' => $this->contenido_neto,
             'costo' => $this->costo,
             'precio_venta' => $this->precio_venta,
-            'id_lugar' => $this->id_lugar,
             'id_categoria' => $this->id_categoria,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ]);
+
+        // Filtro por lugar usando la tabla Stock
+        if (!empty($this->id_lugar)) {
+            $query->innerJoin('stock', 'stock.id_producto = productos.id')
+                  ->andWhere(['stock.id_lugar' => $this->id_lugar])
+                  ->andWhere(['>', 'stock.cantidad', 0]);
+        }
 
         // Búsqueda general en marca, modelo y descripción
         if (!empty($this->search)) {

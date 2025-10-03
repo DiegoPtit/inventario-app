@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\models\Productos;
 use app\models\ProductosSearch;
 use app\models\Entradas;
+use app\models\Lugares;
 use app\models\Stock;
 use app\models\HistoricoPreciosDolar;
 use app\models\Categorias;
@@ -89,6 +90,18 @@ class ProductosController extends Controller
             'id',
             'titulo'
         );
+        
+        // Obtener lugares únicos que tienen stock
+        $lugares = ArrayHelper::map(
+            Lugares::find()
+                ->innerJoin('stock', 'stock.id_lugar = lugares.id')
+                ->where(['>', 'stock.cantidad', 0])
+                ->groupBy(['lugares.id', 'lugares.nombre'])
+                ->orderBy(['lugares.nombre' => SORT_ASC])
+                ->all(),
+            'id',
+            'nombre'
+        );
 
         return $this->render('index', [
             'searchModel' => $searchModel,
@@ -98,6 +111,7 @@ class ProductosController extends Controller
             'colores' => $colores,
             'unidadesMedida' => $unidadesMedida,
             'categorias' => $categorias,
+            'lugares' => $lugares,
         ]);
     }
 

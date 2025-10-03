@@ -424,7 +424,7 @@ $this->registerCss('
                 
                 <div class="row g-3">
                     <!-- Dropdowns en una fila -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="filter-label">
                             <i class="bi bi-palette"></i> Color
                         </label>
@@ -439,7 +439,7 @@ $this->registerCss('
                         </select>
                     </div>
                     
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="filter-label">
                             <i class="bi bi-rulers"></i> Unidad de Medida
                         </label>
@@ -454,7 +454,7 @@ $this->registerCss('
                         </select>
                     </div>
                     
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="filter-label">
                             <i class="bi bi-tags"></i> Categoría
                         </label>
@@ -464,6 +464,21 @@ $this->registerCss('
                                 <option value="<?= $id ?>" 
                                     <?= $searchModel->id_categoria == $id ? 'selected' : '' ?>>
                                     <?= Html::encode($titulo) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="filter-label">
+                            <i class="bi bi-geo-alt"></i> Lugar/Almacén
+                        </label>
+                        <select name="ProductosSearch[id_lugar]" id="filter-lugar" class="filter-select">
+                            <option value="">Todos los lugares</option>
+                            <?php foreach ($lugares as $id => $nombre): ?>
+                                <option value="<?= $id ?>" 
+                                    <?= $searchModel->id_lugar == $id ? 'selected' : '' ?>>
+                                    <?= Html::encode($nombre) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -539,6 +554,10 @@ $this->registerCss('
                 $categoriaActiva = isset($categorias[$searchModel->id_categoria]) ? $categorias[$searchModel->id_categoria] : '';
                 $filtrosActivos[] = '<strong>Categoría:</strong> ' . Html::encode($categoriaActiva);
             }
+            if (!empty($searchModel->id_lugar)) {
+                $lugarActivo = isset($lugares[$searchModel->id_lugar]) ? $lugares[$searchModel->id_lugar] : '';
+                $filtrosActivos[] = '<strong>Lugar:</strong> ' . Html::encode($lugarActivo);
+            }
             if (!empty($searchModel->fecha_inicio)) {
                 $filtrosActivos[] = '<strong>Desde:</strong> ' . Html::encode($searchModel->fecha_inicio);
             }
@@ -577,7 +596,8 @@ $this->registerCss('
                     <?php 
                     $hayFiltros = !empty($searchTerm) || !empty($searchModel->color) || 
                                   !empty($searchModel->unidad_medida) || !empty($searchModel->id_categoria) ||
-                                  !empty($searchModel->fecha_inicio) || !empty($searchModel->fecha_fin);
+                                  !empty($searchModel->id_lugar) || !empty($searchModel->fecha_inicio) || 
+                                  !empty($searchModel->fecha_fin);
                     ?>
                     
                     <?php if ($hayFiltros): ?>
@@ -824,6 +844,7 @@ document.getElementById('clearFiltersBtn').addEventListener('click', function() 
     document.getElementById('filter-color').value = '';
     document.getElementById('filter-unidad-medida').value = '';
     document.getElementById('filter-categoria').value = '';
+    document.getElementById('filter-lugar').value = '';
     document.getElementById('filter-fecha-inicio').value = '';
     document.getElementById('filter-fecha-fin').value = '';
     
