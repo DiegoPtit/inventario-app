@@ -66,11 +66,11 @@ $this->registerCss("body { font-family: 'Montserrat', sans-serif; }");
                 </a>
                 <?php if (Yii::$app->user->isGuest): ?>
                     <a href="<?= Yii::$app->urlManager->createUrl(['site/login']) ?>" class="text-decoration-none text-dark" style="margin-right: 30px;">
-                        <i class="bi bi-box-arrow-in-right fs-4"></i>
+                        <i class="bi bi-person-circle fs-4"></i>
                     </a>
                 <?php else: ?>
                     <a href="<?= Yii::$app->urlManager->createUrl(['site/logout']) ?>" class="text-decoration-none text-dark" data-method="post" style="margin-right: 30px;">
-                        <i class="bi bi-box-arrow-right fs-4"></i>
+                        <i class="bi bi-power fs-4"></i>
                     </a>
                 <?php endif; ?>
             </div>
