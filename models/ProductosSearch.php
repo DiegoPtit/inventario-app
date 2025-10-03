@@ -11,6 +11,13 @@ use app\models\Productos;
  */
 class ProductosSearch extends Productos
 {
+    // Campo para búsqueda general
+    public $search;
+    
+    // Campos para filtros de fecha
+    public $fecha_inicio;
+    public $fecha_fin;
+
     /**
      * {@inheritdoc}
      */
@@ -18,7 +25,7 @@ class ProductosSearch extends Productos
     {
         return [
             [['id', 'id_lugar', 'id_categoria'], 'integer'],
-            [['marca', 'modelo', 'color', 'descripcion', 'unidad_medida', 'codigo_barra', 'fotos', 'sku', 'created_at', 'updated_at'], 'safe'],
+            [['marca', 'modelo', 'color', 'descripcion', 'unidad_medida', 'codigo_barra', 'fotos', 'sku', 'created_at', 'updated_at', 'search', 'fecha_inicio', 'fecha_fin'], 'safe'],
             [['contenido_neto', 'costo', 'precio_venta'], 'number'],
         ];
     }
@@ -70,14 +77,35 @@ class ProductosSearch extends Productos
             'updated_at' => $this->updated_at,
         ]);
 
+        // Búsqueda general en marca, modelo y descripción
+        if (!empty($this->search)) {
+            $query->andFilterWhere([
+                'or',
+                ['like', 'marca', $this->search],
+                ['like', 'modelo', $this->search],
+                ['like', 'descripcion', $this->search],
+                ['like', 'color', $this->search],
+                ['like', 'sku', $this->search],
+                ['like', 'codigo_barra', $this->search],
+            ]);
+        }
+
         $query->andFilterWhere(['like', 'marca', $this->marca])
             ->andFilterWhere(['like', 'modelo', $this->modelo])
-            ->andFilterWhere(['like', 'color', $this->color])
+            ->andFilterWhere(['color' => $this->color])
             ->andFilterWhere(['like', 'descripcion', $this->descripcion])
-            ->andFilterWhere(['like', 'unidad_medida', $this->unidad_medida])
+            ->andFilterWhere(['unidad_medida' => $this->unidad_medida])
             ->andFilterWhere(['like', 'codigo_barra', $this->codigo_barra])
             ->andFilterWhere(['like', 'fotos', $this->fotos])
             ->andFilterWhere(['like', 'sku', $this->sku]);
+        
+        // Filtro por rango de fechas
+        if (!empty($this->fecha_inicio)) {
+            $query->andFilterWhere(['>=', 'created_at', $this->fecha_inicio . ' 00:00:00']);
+        }
+        if (!empty($this->fecha_fin)) {
+            $query->andFilterWhere(['<=', 'created_at', $this->fecha_fin . ' 23:59:59']);
+        }
 
         return $dataProvider;
     }

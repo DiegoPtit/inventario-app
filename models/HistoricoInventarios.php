@@ -3,6 +3,8 @@
 namespace app\models;
 
 use Yii;
+use yii\behaviors\TimestampBehavior;
+use yii\db\Expression;
 
 /**
  * This is the model class for table "historico_inventarios".
@@ -18,6 +20,20 @@ use Yii;
 class HistoricoInventarios extends \yii\db\ActiveRecord
 {
 
+    /**
+     * {@inheritdoc}
+     */
+    public function behaviors()
+    {
+        return [
+            [
+                'class' => TimestampBehavior::class,
+                'createdAtAttribute' => 'created_at',
+                'updatedAtAttribute' => false,
+                'value' => new Expression('NOW()'),
+            ],
+        ];
+    }
 
     /**
      * {@inheritdoc}

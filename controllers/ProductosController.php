@@ -7,10 +7,12 @@ use app\models\ProductosSearch;
 use app\models\Entradas;
 use app\models\Stock;
 use app\models\HistoricoPreciosDolar;
+use app\models\Categorias;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use yii\web\UploadedFile;
+use yii\helpers\ArrayHelper;
 use Yii;
 
 /**
@@ -44,7 +46,14 @@ class ProductosController extends Controller
     public function actionIndex()
     {
         $searchModel = new ProductosSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
+        
+        // Manejar búsqueda general
+        $queryParams = $this->request->queryParams;
+        if (isset($queryParams['search']) && !empty($queryParams['search'])) {
+            $queryParams['ProductosSearch']['search'] = $queryParams['search'];
+        }
+        
+        $dataProvider = $searchModel->search($queryParams);
 
         // Get latest dollar prices for conversions
         $precioOficial = HistoricoPreciosDolar::find()
@@ -56,12 +65,39 @@ class ProductosController extends Controller
             ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
             ->orderBy(['created_at' => SORT_DESC])
             ->one();
+        
+        // Obtener valores únicos para los filtros
+        $colores = Productos::find()
+            ->select('color')
+            ->distinct()
+            ->where(['IS NOT', 'color', null])
+            ->andWhere(['<>', 'color', ''])
+            ->orderBy(['color' => SORT_ASC])
+            ->column();
+        
+        $unidadesMedida = Productos::find()
+            ->select('unidad_medida')
+            ->distinct()
+            ->where(['IS NOT', 'unidad_medida', null])
+            ->andWhere(['<>', 'unidad_medida', ''])
+            ->orderBy(['unidad_medida' => SORT_ASC])
+            ->column();
+        
+        // Obtener categorías
+        $categorias = ArrayHelper::map(
+            Categorias::find()->orderBy(['titulo' => SORT_ASC])->all(),
+            'id',
+            'titulo'
+        );
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'precioOficial' => $precioOficial,
             'precioParalelo' => $precioParalelo,
+            'colores' => $colores,
+            'unidadesMedida' => $unidadesMedida,
+            'categorias' => $categorias,
         ]);
     }
 
@@ -234,6 +270,103 @@ class ProductosController extends Controller
         $this->findModel($id)->delete();
 
         return $this->redirect(['index']);
+    }
+
+    /**
+     * Genera un reporte de inventario
+     * @return string
+     */
+    public function actionReporte()
+    {
+        $tipo = Yii::$app->request->get('tipo', 'general');
+        $idLugar = Yii::$app->request->get('id_lugar');
+        
+        // Configurar el layout para la vista de impresión
+        $this->layout = false;
+        
+        // Obtener precios del dólar para conversiones
+        $precioOficial = HistoricoPreciosDolar::find()
+            ->where(['tipo' => HistoricoPreciosDolar::TIPO_OFICIAL])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->one();
+        
+        $precioParalelo = HistoricoPreciosDolar::find()
+            ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
+            ->orderBy(['created_at' => SORT_DESC])
+            ->one();
+        
+        // Obtener los datos según el tipo de reporte
+        if ($tipo === 'por-lugar' && !empty($idLugar)) {
+            // Reporte por lugar específico
+            $lugares = [\app\models\Lugares::findOne($idLugar)];
+            if (!$lugares[0]) {
+                throw new NotFoundHttpException('El almacén no existe.');
+            }
+        } else {
+            // Reporte general (todos los lugares)
+            $lugares = \app\models\Lugares::find()->orderBy(['nombre' => SORT_ASC])->all();
+        }
+        
+        // Preparar datos del reporte agrupados por lugar
+        $datosReporte = [];
+        
+        foreach ($lugares as $lugar) {
+            // Obtener productos que tienen stock en este lugar
+            $stocks = Stock::find()
+                ->where(['id_lugar' => $lugar->id])
+                ->andWhere(['>', 'cantidad', 0])
+                ->with('producto')
+                ->all();
+            
+            if (empty($stocks)) {
+                continue; // Saltar lugares sin stock
+            }
+            
+            $productos = [];
+            $totalCosto = 0;
+            $totalPrecioVenta = 0;
+            $totalCantidad = 0;
+            
+            foreach ($stocks as $stock) {
+                $producto = $stock->producto;
+                if (!$producto) {
+                    continue;
+                }
+                
+                $productos[] = [
+                    'marca' => $producto->marca,
+                    'modelo' => $producto->modelo,
+                    'color' => $producto->color,
+                    'contenido_neto' => $producto->contenido_neto,
+                    'unidad_medida' => $producto->unidad_medida,
+                    'costo' => $producto->costo,
+                    'precio_venta' => $producto->precio_venta,
+                    'cantidad' => $stock->cantidad,
+                    'subtotal_costo' => $producto->costo * $stock->cantidad,
+                    'subtotal_venta' => $producto->precio_venta * $stock->cantidad,
+                ];
+                
+                $totalCosto += $producto->costo * $stock->cantidad;
+                $totalPrecioVenta += $producto->precio_venta * $stock->cantidad;
+                $totalCantidad += $stock->cantidad;
+            }
+            
+            $datosReporte[] = [
+                'lugar' => $lugar,
+                'productos' => $productos,
+                'total_costo' => $totalCosto,
+                'total_precio_venta' => $totalPrecioVenta,
+                'total_cantidad' => $totalCantidad,
+            ];
+        }
+        
+        return $this->render('reporte', [
+            'datosReporte' => $datosReporte,
+            'tipo' => $tipo,
+            'fecha' => date('d/m/Y H:i:s'),
+            'precioOficial' => $precioOficial,
+            'precioParalelo' => $precioParalelo,
+        ]);
     }
 
     /**

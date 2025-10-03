@@ -7,6 +7,7 @@ use app\models\HistoricoInventariosSearch;
 use app\models\Entradas;
 use app\models\Productos;
 use app\models\HistoricoPreciosDolar;
+use app\models\HistoricoMovimientos;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -198,10 +199,26 @@ class HistoricoInventariosController extends Controller
             $cantidadProductos = 0;
             $valorTotal = 0;
             
+            // Sumar valor de las entradas
             foreach ($entradas as $entrada) {
                 $cantidadProductos += $entrada->cantidad;
                 if ($entrada->producto) {
                     $valorTotal += ($entrada->cantidad * $entrada->producto->costo);
+                }
+            }
+            
+            // Restar valor de las salidas (solo aquellas con accion='SALIDA' y lugar_destino=NULL)
+            $salidas = HistoricoMovimientos::find()
+                ->where(['>=', 'created_at', $fechaInicio])
+                ->where(['<=', 'created_at', $fechaCierre])
+                ->andWhere(['accion' => HistoricoMovimientos::ACCION_SALIDA])
+                ->andWhere(['id_lugar_destino' => null])
+                ->with('producto')
+                ->all();
+            
+            foreach ($salidas as $salida) {
+                if ($salida->producto) {
+                    $valorTotal -= ($salida->cantidad * $salida->producto->costo);
                 }
             }
             
@@ -256,6 +273,15 @@ class HistoricoInventariosController extends Controller
             $model->valor = $data['valor'];
             $model->nota = $data['nota'] ?? null;
             
+            // Log de datos recibidos para debugging
+            Yii::info('Datos del cierre de inventario: ' . json_encode([
+                'fecha_inicio' => $model->fecha_inicio,
+                'fecha_cierre' => $model->fecha_cierre,
+                'cantidad_productos' => $model->cantidad_productos,
+                'valor' => $model->valor,
+                'nota' => $model->nota,
+            ]), 'inventario');
+            
             if ($model->save()) {
                 return [
                     'success' => true,
@@ -263,14 +289,24 @@ class HistoricoInventariosController extends Controller
                     'inventario_id' => $model->id
                 ];
             } else {
+                // Log de errores de validación
+                Yii::error('Errores de validación al guardar cierre: ' . json_encode($model->errors), 'inventario');
+                
+                // Formatear errores para mostrar al usuario
+                $errorMessages = [];
+                foreach ($model->errors as $attribute => $errors) {
+                    $errorMessages[] = $attribute . ': ' . implode(', ', $errors);
+                }
+                
                 return [
                     'success' => false,
-                    'message' => 'Error al guardar el cierre de inventario',
+                    'message' => 'Error al guardar el cierre de inventario: ' . implode('; ', $errorMessages),
                     'errors' => $model->errors
                 ];
             }
             
         } catch (\Exception $e) {
+            Yii::error('Excepción al registrar cierre: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString(), 'inventario');
             return [
                 'success' => false,
                 'message' => 'Error al registrar el cierre: ' . $e->getMessage()

@@ -40,11 +40,28 @@ class ClientesController extends Controller
     public function actionIndex()
     {
         $searchModel = new ClientesSearch();
-        $dataProvider = $searchModel->search($this->request->queryParams);
+        
+        // Manejar búsqueda general
+        $queryParams = $this->request->queryParams;
+        if (isset($queryParams['search']) && !empty($queryParams['search'])) {
+            $queryParams['ClientesSearch']['search'] = $queryParams['search'];
+        }
+        
+        $dataProvider = $searchModel->search($queryParams);
+        
+        // Obtener valores únicos para los filtros
+        $ubicaciones = Clientes::find()
+            ->select('ubicacion')
+            ->distinct()
+            ->where(['IS NOT', 'ubicacion', null])
+            ->andWhere(['<>', 'ubicacion', ''])
+            ->orderBy(['ubicacion' => SORT_ASC])
+            ->column();
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'ubicaciones' => $ubicaciones,
         ]);
     }
 

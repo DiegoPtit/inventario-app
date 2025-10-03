@@ -11,6 +11,13 @@ use app\models\Clientes;
  */
 class ClientesSearch extends Clientes
 {
+    // Campo para búsqueda general
+    public $search;
+    
+    // Campos para filtros de fecha
+    public $fecha_inicio;
+    public $fecha_fin;
+
     /**
      * {@inheritdoc}
      */
@@ -18,7 +25,7 @@ class ClientesSearch extends Clientes
     {
         return [
             [['id', 'edad'], 'integer'],
-            [['documento_identidad', 'nombre', 'ubicacion', 'telefono', 'status', 'created_at', 'updated_at'], 'safe'],
+            [['documento_identidad', 'nombre', 'ubicacion', 'telefono', 'status', 'created_at', 'updated_at', 'search', 'fecha_inicio', 'fecha_fin'], 'safe'],
         ];
     }
 
@@ -65,11 +72,30 @@ class ClientesSearch extends Clientes
             'updated_at' => $this->updated_at,
         ]);
 
+        // Búsqueda general en nombre, documento, ubicación y teléfono
+        if (!empty($this->search)) {
+            $query->andFilterWhere([
+                'or',
+                ['like', 'nombre', $this->search],
+                ['like', 'documento_identidad', $this->search],
+                ['like', 'ubicacion', $this->search],
+                ['like', 'telefono', $this->search],
+            ]);
+        }
+
         $query->andFilterWhere(['like', 'documento_identidad', $this->documento_identidad])
             ->andFilterWhere(['like', 'nombre', $this->nombre])
-            ->andFilterWhere(['like', 'ubicacion', $this->ubicacion])
+            ->andFilterWhere(['ubicacion' => $this->ubicacion])
             ->andFilterWhere(['like', 'telefono', $this->telefono])
-            ->andFilterWhere(['like', 'status', $this->status]);
+            ->andFilterWhere(['status' => $this->status]);
+        
+        // Filtro por rango de fechas
+        if (!empty($this->fecha_inicio)) {
+            $query->andFilterWhere(['>=', 'created_at', $this->fecha_inicio . ' 00:00:00']);
+        }
+        if (!empty($this->fecha_fin)) {
+            $query->andFilterWhere(['<=', 'created_at', $this->fecha_fin . ' 23:59:59']);
+        }
 
         return $dataProvider;
     }
