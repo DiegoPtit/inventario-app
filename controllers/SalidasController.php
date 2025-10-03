@@ -295,7 +295,7 @@ class SalidasController extends Controller
         $result = [];
         foreach ($stocks as $stock) {
             if ($stock->producto && $stock->lugar) {
-                $nombreProducto = trim(($stock->producto->marca ?: '') . ' ' . ($stock->producto->descripcion ?: 'Sin descripción'));
+                $nombreProducto = trim(($stock->producto->marca ?: '') . ' ' . ($stock->producto->modelo ?: 'Sin modelo'));
                 
                 $result[] = [
                     'id' => $stock->id_producto,

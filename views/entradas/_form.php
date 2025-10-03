@@ -13,7 +13,7 @@ use app\models\Proveedores;
 
 // Obtener listas para dropdowns
 $productos = ArrayHelper::map(Productos::find()->all(), 'id', function($model) {
-    return $model->marca . ' ' . $model->modelo . ' - ' . $model->color;
+    return $model->marca . ' ' . $model->modelo;
 });
 $lugares = ArrayHelper::map(Lugares::find()->all(), 'id', 'nombre');
 $proveedores = ArrayHelper::map(Proveedores::find()->all(), 'id', 'razon_social');
