@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba QuaggaJS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        #scanner-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        #interactive {
+            width: 100%;
+            height: 100%;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #status {
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Prueba del Lector de Código de Barras</h1>
+
+    <div id="status">Presiona "Iniciar Escáner" para comenzar...</div>
+
+    <div>
+        <button class="btn" onclick="startScanner()">Iniciar Escáner</button>
+        <button class="btn" onclick="stopScanner()">Detener</button>
+    </div>
+
+    <div id="scanner-container">
+        <div id="interactive" class="viewport"></div>
+    </div>
+
+    <div id="result">
+        <h3>Código Detectado:</h3>
+        <p id="barcode-result"></p>
+    </div>
+
+    <div id="console-log"
+        style="margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 5px; max-height: 200px; overflow-y: auto;">
+        <h4>Console Log:</h4>
+        <pre id="log-content"></pre>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
+    <script>
+        let isScanning = false;
+
+        function log(message) {
+            console.log(message);
+            const logContent = document.getElementById('log-content');
+            logContent.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        function updateStatus(message, color = '#e3f2fd') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.background = color;
+        }
+
+        function startScanner() {
+            if (isScanning) {
+                log('El escáner ya está activo');
+                return;
+            }
+
+            log('Verificando si Quagga está disponible...');
+            if (typeof Quagga === 'undefined') {
+                log('ERROR: Quagga no está cargado!');
+                updateStatus('Error: QuaggaJS no cargó correctamente', '#ffcdd2');
+                return;
+            }
+            log('Quagga está disponible');
+
+            updateStatus('Iniciando cámara...', '#fff9c4');
+            log('Iniciando configuración de Quagga...');
+
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#interactive'),
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    }
+                },
+                decoder: {
+                    readers: [
+                        "ean_reader",
+                        "code_128_reader",
+                        "code_39_reader",
+                        "upc_reader"
+                    ],
+                    debug: {
+                        drawBoundingBox: true,
+                        showFrequency: true,
+                        drawScanline: true,
+                        showPattern: true
+                    }
+                },
+                locate: true,
+                numOfWorkers: 2,
+                frequency: 10
+            }, function (err) {
+                if (err) {
+                    log('ERROR en init: ' + err.message);
+                    log('Error completo: ' + JSON.stringify(err));
+                    updateStatus('Error al inicializar: ' + err.message, '#ffcdd2');
+                    return;
+                }
+
+                log('Quagga inicializado correctamente');
+
+                try {
+                    Quagga.start();
+                    log('Quagga.start() ejecutado');
+                    isScanning = true;
+                    updateStatus('Cámara activa - Enfoque un código de barras', '#c8e6c9');
+                } catch (e) {
+                    log('ERROR en start: ' + e.message);
+                    updateStatus('Error al iniciar: ' + e.message, '#ffcdd2');
+                }
+            });
+
+            Quagga.onDetected(function (result) {
+                if (result && result.codeResult && result.codeResult.code) {
+                    const code = result.codeResult.code;
+                    log('Código detectado: ' + code);
+
+                    document.getElementById('barcode-result').textContent = code;
+                    document.getElementById('result').style.display = 'block';
+
+                    updateStatus('¡Código detectado! ' + code, '#c8e6c9');
+
+                    // Opcional: detener después de la primera detección
+                    // stopScanner();
+                }
+            });
+
+            Quagga.onProcessed(function (result) {
+                // Log cada 50 frames para no saturar
+                if (Math.random() < 0.02) {
+                    log('Procesando frame...');
+                }
+            });
+        }
+
+        function stopScanner() {
+            if (isScanning) {
+                Quagga.stop();
+                isScanning = false;
+                log('Escáner detenido');
+                updateStatus('Escáner detenido', '#e3f2fd');
+            } else {
+                log('El escáner no estaba activo');
+            }
+        }
+
+        // Log inicial
+        log('Página cargada');
+        log('Versión de Quagga: ' + (typeof Quagga !== 'undefined' ? 'Cargado' : 'NO CARGADO'));
+    </script>
+</body>
+
+</html>

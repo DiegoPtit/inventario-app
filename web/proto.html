@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo Modo Rápido POS</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- QuaggaJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+    <style>
+        body {
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .scanner-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        #barcode-reader {
+            width: 100%;
+            max-width: 640px;
+            height: 400px;
+            background: #000;
+            border-radius: 10px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 50%;
+            border: 3px solid #28a745;
+            border-radius: 10px;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        }
+
+        #scanner-status {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .product-details {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .product-quantity {
+            background: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .btn-delete {
+            margin-left: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="mb-4">
+            <i class="bi bi-upc-scan"></i> Prototipo Modo Rápido POS
+        </h1>
+        <!-- Scanner Section -->
+        <div class="scanner-container">
+            <h3 class="mb-3">Escáner de Códigos de Barras</h3>
+            <div style="position: relative;">
+                <div id="barcode-reader"></div>
+                <div class="scanner-overlay"></div>
+            </div>
+            <div id="scanner-status">
+                <i class="bi bi-camera-video"></i> Iniciando cámara...
+            </div>
+            <div class="mt-3 text-center">
+                <button id="btn-toggle-scanner" class="btn btn-primary">
+                    <i class="bi bi-stop-circle"></i> Detener Escáner
+                </button>
+                <button id="btn-clear-storage" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Limpiar Listado
+                </button>
+            </div>
+        </div>
+        <!-- Products List -->
+        <div class="scanner-container">
+            <h3 class="mb-3">
+                Productos Escaneados
+                <span class="badge bg-primary" id="products-count">0</span>
+            </h3>
+            <div id="products-list">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>No hay productos escaneados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Confirmación -->
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 15px;">
+                <div class="modal-header"
+                    style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 15px 15px 0 0;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle"></i> Producto Escaneado
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center" style="padding: 30px;">
+                    <h4 id="modal-producto-nombre" class="mb-2"></h4>
+                    <p id="modal-codigo" class="text-muted mb-3"></p>
+                    <!-- Selector de Ubicación -->
+                    <div class="mb-3" id="ubicacion-selector-container">
+                        <label class="form-label fw-bold">Ubicación</label>
+                        <select id="modal-ubicacion" class="form-select">
+                            <!-- Opciones dinámicas -->
+                        </select>
+                    </div>
+                    <!-- Cantidad -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cantidad</label>
+                        <input type="number" id="modal-cantidad" class="form-control form-control-lg text-center"
+                            value="1" min="1" style="font-size: 1.5rem; max-width: 150px; margin: 0 auto;">
+                        <small class="text-muted">Stock disponible: <span id="modal-stock-max">0</span></small>
+                    </div>
+                </div>
+                <div class="modal-footer" style="justify-content: center; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btn-confirmar">
+                        <i class="bi bi-check-circle"></i> Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // =======================
+        // CONFIGURACIÓN
+        // =======================
+        // Base de datos de productos simulada
+        const PRODUCTOS_DB = {
+            '7501234567890': {
+                nombre: 'Acetaminofén 500mg',
+                codigo: '7501234567890',
+                ubicaciones: [
+                    { id: 1, nombre: 'Almacén A', stock: 4 },
+                    { id: 2, nombre: 'Almacén B', stock: 3 }
+                ]
+            },
+            '7891234567892': {
+                nombre: 'Ibuprofeno 400mg',
+                codigo: '7891234567892',
+                ubicaciones: [
+                    { id: 1, nombre: 'Almacén A', stock: 10 }
+                ]
+            },
+            '7501234567891': {
+                nombre: 'Aspirina 100mg',
+                codigo: '7501234567891',
+                ubicaciones: [
+                    { id: 2, nombre: 'Almacén B', stock: 8 },
+                    { id: 3, nombre: 'Farmacia Principal', stock: 5 }
+                ]
+            }
+        };
+        // =======================
+        // ESTADO DE LA APP
+        // =======================
+        let scannerActivo = false;
+        let audioContext = null;
+        let productoActual = null;
+        let productos = [];
+        // =======================
+        // INICIALIZACIÓN
+        // =======================
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarProductosDesdeStorage();
+            renderizarProductos();
+            iniciarScanner();
+            // Event Listeners
+            document.getElementById('btn-toggle-scanner').addEventListener('click', toggleScanner);
+            document.getElementById('btn-clear-storage').addEventListener('click', limpiarStorage);
+            document.getElementById('btn-confirmar').addEventListener('click', confirmarProducto);
+            document.getElementById('modal-ubicacion').addEventListener('change', actualizarStockMaximo);
+            // Cerrar modal
+            document.getElementById('modalConfirmacion').addEventListener('hidden.bs.modal', () => {
+                productoActual = null;
+                reanudarScanner();
+            });
+        });
+        // =======================
+        // SCANNER
+        // =======================
+        function iniciarScanner() {
+            if (scannerActivo) return;
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#barcode-reader'),
+                    constraints: {
+                        width: 640,
+                        height: 400,
+                        facingMode: "environment"
+                    }
+                },
+                decoder: {
+                    readers: ["ean_reader", "ean_8_reader", "code_128_reader", "code_39_reader", "upc_reader", "upc_e_reader"]
+                },
+                locate: true
+            }, function (err) {
+                if (err) {
+                    document.getElementById('scanner-status').innerHTML =
+                        '<i class="bi bi-exclamation-triangle text-danger"></i> Error: ' + err.message;
+                    return;
+                }
+                scannerActivo = true;
+                Quagga.start();
+                document.getElementById('scanner-status').innerHTML =
+                    '<i class="bi bi-camera-video text-success"></i> Cámara activa - Escanee un código';
+                document.getElementById('btn-toggle-scanner').innerHTML =
+                    '<i class="bi bi-stop-circle"></i> Detener Escáner';
+            });
+            Quagga.onDetected(procesarCodigoEscaneado);
+        }
+        function detenerScanner() {
+            if (scannerActivo) {
+                Quagga.stop();
+                scannerActivo = false;
+                document.getElementById('scanner-status').innerHTML =
+                    '<i class="bi bi-camera-video-off text-danger"></i> Cámara detenida';
+                document.getElementById('btn-toggle-scanner').innerHTML =
+                    '<i class="bi bi-play-circle"></i> Iniciar Escáner';
+            }
+        }
+        function toggleScanner() {
+            if (scannerActivo) {
+                detenerScanner();
+            } else {
+                iniciarScanner();
+            }
+        }
+        function reanudarScanner() {
+            if (!scannerActivo) {
+                setTimeout(() => {
+                    Quagga.start();
+                    scannerActivo = true;
+                }, 500);
+            }
+        }
+        // =======================
+        // PROCESAMIENTO
+        // =======================
+        function procesarCodigoEscaneado(result) {
+            const codigo = result.codeResult.code;
+            // Pausar scanner
+            Quagga.stop();
+            scannerActivo = false;
+            // Buscar producto en BD
+            const producto = PRODUCTOS_DB[codigo];
+            if (!producto) {
+                alert('Producto no encontrado: ' + codigo);
+                reanudarScanner();
+                return;
+            }
+            // Verificar si ya existe en el listado
+            const productoExistente = productos.find(p => p.codigo === codigo);
+            if (productoExistente) {
+                // Incrementar cantidad
+                incrementarCantidad(productoExistente, producto);
+            } else {
+                // Mostrar modal de confirmación
+                mostrarModalConfirmacion(producto);
+            }
+        }
+        function incrementarCantidad(productoExistente, productoInfo) {
+            // Calcular stock total disponible
+            const stockTotal = productoInfo.ubicaciones.reduce((sum, u) => sum + u.stock, 0);
+            // Verificar si hay stock disponible
+            if (productoExistente.cantidad >= stockTotal) {
+                alert('Error: La cantidad excede el stock disponible (' + stockTotal + ' unidades)');
+                reanudarScanner();
+                return;
+            }
+            // Incrementar
+            productoExistente.cantidad++;
+            // Guardar
+            guardarProductosEnStorage();
+            renderizarProductos();
+            // Sonido
+            reproducirSonidoA4();
+            // Reanudar
+            reanudarScanner();
+        }
+        function mostrarModalConfirmacion(producto) {
+            productoActual = producto;
+            // Llenar modal
+            document.getElementById('modal-producto-nombre').textContent = producto.nombre;
+            document.getElementById('modal-codigo').textContent = 'Código: ' + producto.codigo;
+            // Llenar selector de ubicaciones
+            const selectUbicacion = document.getElementById('modal-ubicacion');
+            selectUbicacion.innerHTML = '';
+            producto.ubicaciones.forEach(ubicacion => {
+                const option = document.createElement('option');
+                option.value = ubicacion.id;
+                option.textContent = `${ubicacion.nombre} (${ubicacion.stock} uds disponibles)`;
+                option.dataset.stock = ubicacion.stock;
+                selectUbicacion.appendChild(option);
+            });
+            // Si solo hay una ubicación, ocultar selector
+            if (producto.ubicaciones.length === 1) {
+                document.getElementById('ubicacion-selector-container').style.display = 'none';
+            } else {
+                document.getElementById('ubicacion-selector-container').style.display = 'block';
+            }
+            // Actualizar stock máximo
+            actualizarStockMaximo();
+            // Resetear cantidad
+            document.getElementById('modal-cantidad').value = 1;
+            // Sonido
+            reproducirSonidoA4();
+            // Abrir modal
+            const modal = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
+            modal.show();
+        }
+        function actualizarStockMaximo() {
+            const select = document.getElementById('modal-ubicacion');
+            const selectedOption = select.options[select.selectedIndex];
+            const stockMax = parseInt(selectedOption.dataset.stock) || 0;
+            document.getElementById('modal-stock-max').textContent = stockMax;
+            document.getElementById('modal-cantidad').setAttribute('max', stockMax);
+        }
+        function confirmarProducto() {
+            if (!productoActual) return;
+            const ubicacionId = parseInt(document.getElementById('modal-ubicacion').value);
+            const cantidad = parseInt(document.getElementById('modal-cantidad').value) || 1;
+            const ubicacion = productoActual.ubicaciones.find(u => u.id === ubicacionId);
+            // Validar
+            if (cantidad > ubicacion.stock) {
+                alert('La cantidad excede el stock disponible');
+                return;
+            }
+            // Agregar al listado
+            productos.push({
+                codigo: productoActual.codigo,
+                nombre: productoActual.nombre,
+                ubicacion: ubicacion.nombre,
+                cantidad: cantidad,
+                timestamp: Date.now()
+            });
+            // Guardar
+            guardarProductosEnStorage();
+            renderizarProductos();
+            // Cerrar modal
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmacion')).hide();
+            // Reanudar
+            setTimeout(reanudarScanner, 500);
+        }
+        // =======================
+        // AUDIO
+        // =======================
+        function reproducirSonidoA4() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 440; // A4
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+        // =======================
+        // STORAGE
+        // =======================
+        function guardarProductosEnStorage() {
+            localStorage.setItem('pos_productos', JSON.stringify(productos));
+        }
+        function cargarProductosDesdeStorage() {
+            const stored = localStorage.getItem('pos_productos');
+            productos = stored ? JSON.parse(stored) : [];
+        }
+        function limpiarStorage() {
+            if (confirm('¿Seguro que deseas limpiar todo el listado?')) {
+                productos = [];
+                localStorage.removeItem('pos_productos');
+                renderizarProductos();
+            }
+        }
+        // =======================
+        // RENDERIZADO
+        // =======================
+        function renderizarProductos() {
+            const container = document.getElementById('products-list');
+            document.getElementById('products-count').textContent = productos.length;
+            if (productos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No hay productos escaneados</p>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = productos.map((producto, index) => `
+                <div class="product-card">
+                    <div class="product-info">
+                        <div class="product-name">${producto.nombre}</div>
+                        <div class="product-details">
+                            <i class="bi bi-geo-alt"></i> ${producto.ubicacion} • 
+                            <i class="bi bi-upc"></i> ${producto.codigo}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="product-quantity">x${producto.cantidad}</div>
+                        <button class="btn btn-danger btn-sm btn-delete" onclick="eliminarProducto(${index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        function eliminarProducto(index) {
+            if (confirm('¿Eliminar este producto?')) {
+                productos.splice(index, 1);
+                guardarProductosEnStorage();
+                renderizarProductos();
+            }
+        }
+    </script>
+</body>
+
+</html>

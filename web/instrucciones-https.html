@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar HTTPS para el Lector de Código de Barras</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        h2 {
+            color: #007bff;
+            margin-top: 30px;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        .step {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 3px solid #007bff;
+        }
+
+        .step h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔒 Configurar HTTPS para Lector de Código de Barras</h1>
+
+    <div class="alert alert-warning">
+        <strong>⚠️ Importante:</strong> Los navegadores móviles requieren <strong>HTTPS</strong> para acceder a la
+        cámara por razones de seguridad. En desktop, <code>localhost</code> funciona sin SSL, pero en móviles necesitas
+        HTTPS.
+    </div>
+
+    <h2>Opción 1: Usar ngrok (Más Fácil) ✅</h2>
+
+    <div class="step">
+        <h3>Paso 1: Descargar ngrok</h3>
+        <p>Visita <a href="https://ngrok.com/download" target="_blank">ngrok.com/download</a> y descarga ngrok para
+            Windows.</p>
+    </div>
+
+    <div class="step">
+        <h3>Paso 2: Extraer y colocar ngrok.exe</h3>
+        <p>Extrae <code>ngrok.exe</code> en una carpeta accesible, por ejemplo: <code>C:\ngrok\</code></p>
+    </div>
+
+    <div class="step">
+        <h3>Paso 3: Ejecutar ngrok</h3>
+        <p>Abre PowerShell o CMD en la carpeta donde está ngrok y ejecuta:</p>
+        <pre>.\ngrok.exe http 80</pre>
+        <p><small>Si tu servidor local usa otro puerto (ej: 8080), cambia el 80 por ese puerto.</small></p>
+    </div>
+
+    <div class="step">
+        <h3>Paso 4: Obtener la URL HTTPS</h3>
+        <p>Ngrok te mostrará algo como:</p>
+        <pre>
+Forwarding  https://abc123.ngrok-free.app -> http://localhost:80
+        </pre>
+        <p>Usa esa URL HTTPS en tu móvil para acceder a la aplicación.</p>
+    </div>
+
+    <div class="alert alert-success">
+        <strong>✅ ¡Listo!</strong> Ahora puedes acceder desde tu móvil usando la URL HTTPS de ngrok y la cámara
+        funcionará correctamente.
+    </div>
+
+    <hr style="margin: 40px 0;">
+
+    <h2>Opción 2: Certificado SSL Local (Más Técnico)</h2>
+
+    <div class="alert alert-info">
+        <strong>ℹ️ Nota:</strong> Esta opción es más compleja y requiere configurar Apache/Nginx con SSL. Si buscas
+        rapidez, usa ngrok.
+    </div>
+
+    <div class="step">
+        <h3>Para Apache (XAMPP/WAMP)</h3>
+        <ol>
+            <li>Genera certificados SSL autofirmados</li>
+            <li>Configura <code>httpd-ssl.conf</code></li>
+            <li>Habilita el módulo SSL</li>
+            <li>Reinicia Apache</li>
+            <li>Acepta el certificado en el dispositivo móvil</li>
+        </ol>
+        <p><small>Esta opción requiere aceptar advertencias de seguridad en cada dispositivo.</small></p>
+    </div>
+
+    <hr style="margin: 40px 0;">
+
+    <h2>💡 Consejos para Mejorar la Lectura de Códigos</h2>
+
+    <div class="step">
+        <h3>1. Iluminación</h3>
+        <ul>
+            <li>Usa buena iluminación (luz natural o lámpara LED)</li>
+            <li>Evita sombras sobre el código de barras</li>
+            <li>No apuntes directamente a fuentes de luz brillante</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>2. Distancia y Enfoque</h3>
+        <ul>
+            <li>Mantén el código a 10-20 cm de la cámara</li>
+            <li>Espera a que la cámara enfoque automáticamente</li>
+            <li>Mantén el dispositivo estable</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>3. Calidad del Código</h3>
+        <ul>
+            <li>Asegúrate de que el código esté impreso claramente</li>
+            <li>Evita códigos arrugados o dañados</li>
+            <li>Los códigos más grandes son más fáciles de leer</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>4. Tipo de Código</h3>
+        <p>El sistema soporta estos formatos:</p>
+        <ul>
+            <li><strong>EAN-13 / EAN-8</strong> - Más común en productos comerciales ✅</li>
+            <li><strong>UPC-A / UPC-E</strong> - Común en productos de EE.UU. ✅</li>
+            <li><strong>Code 128</strong> - Usado en logística ✅</li>
+            <li><strong>Code 39</strong> - Códigos alfanuméricos ✅</li>
+        </ul>
+    </div>
+
+    <hr style="margin: 40px 0;">
+
+    <h2>🔧 Solución de Problemas</h2>
+
+    <div class="step">
+        <h3>❌ "Canvas en negro" en Desktop</h3>
+        <p><strong>Solución:</strong> Ya está arreglado con el nuevo código. El problema era timing del modal de
+            Bootstrap.</p>
+    </div>
+
+    <div class="step">
+        <h3>❌ "getUserMedia is not defined" en Móvil</h3>
+        <p><strong>Solución:</strong> Usa ngrok para obtener una URL HTTPS o configura SSL en tu servidor.</p>
+    </div>
+
+    <div class="step">
+        <h3>❌ "La cámara no enfoca bien"</h3>
+        <p><strong>Soluciones:</strong></p>
+        <ul>
+            <li>Limpia el lente de la cámara</li>
+            <li>Mejora la iluminación</li>
+            <li>Usa la cámara trasera (mejor calidad)</li>
+            <li>Prueba con diferentes códigos de barras</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h3>❌ "Permiso de cámara denegado"</h3>
+        <p><strong>Solución:</strong></p>
+        <ol>
+            <li>Ve a la configuración del navegador</li>
+            <li>Busca "Permisos del sitio" o "Configuración del sitio"</li>
+            <li>Encuentra tu sitio local</li>
+            <li>Permite el acceso a la cámara</li>
+            <li>Recarga la página</li>
+        </ol>
+    </div>
+
+    <hr style="margin: 40px 0;">
+
+    <div class="alert alert-info">
+        <strong>📚 Recursos Útiles:</strong><br>
+        • <a href="https://ngrok.com/" target="_blank">ngrok.com</a> - Túnel HTTPS gratis<br>
+        • <a href="https://github.com/ericblade/quagga2" target="_blank">QuaggaJS Documentation</a><br>
+        • Volver a: <a href="test-barcode.html">Página de Prueba</a>
+    </div>
+</body>
+
+</html>
