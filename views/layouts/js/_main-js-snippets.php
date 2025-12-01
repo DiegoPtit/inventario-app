@@ -3,8 +3,40 @@ $userIsGuest = Yii::$app->user->isGuest;
 $userIdentity = Yii::$app->user->identity;
 $modalClosed = (!$userIsGuest && $userIdentity) ? ($userIdentity->modalClosed ?? '0') : '0';
 $dateModalClosed = (!$userIsGuest && $userIdentity) ? ($userIdentity->dateModalClosed ?? '') : '';
+$csrfParam = Yii::$app->request->csrfParam;
+$csrfToken = Yii::$app->request->csrfToken;
 
-$this->registerJs("
+// URLs para HEREDOC
+$urlUpdateParallel = \yii\helpers\Url::to(['site/update-parallel-dollar-rate']);
+$urlGetDataCierre = \yii\helpers\Url::to(['historico-inventarios/get-data-cierre']);
+$urlRegistrarCierre = \yii\helpers\Url::to(['historico-inventarios/registrar-cierre']);
+$urlIndexInventarios = \yii\helpers\Url::to(['historico-inventarios/index']);
+$urlGetClientesPendientes = \yii\helpers\Url::to(['site/get-clientes-pendientes']);
+$urlFacturaView = \yii\helpers\Url::to(['facturas/view', 'id' => '__ID__']);
+
+// Variables JavaScript
+$userIsGuestJS = $userIsGuest ? 'true' : 'false';
+
+// Event listener condicional
+$loadEventListener = (!$userIsGuest && $userIdentity) ? "
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            if (puedeVerModal()) {
+                cargarClientesPendientes();
+            }
+        }, 1000); // Esperar 1 segundo después de cargar la página
+    });" : "";
+
+$this->registerJs(<<<JS
+// JavaScript code goes here
+
+
+
+JS
+);
+
+
+$this->registerJs(<<<JS
 // Verificar si el modal existe antes de ejecutar el código
 if (document.getElementById('modalNuevoCliente')) {
     let currentModalStep = 1;
@@ -16,7 +48,7 @@ if (document.getElementById('modalNuevoCliente')) {
     document.querySelectorAll('.step-content-modal').forEach(content => {
         content.classList.remove('active');
     });
-    const activeContent = document.querySelector('.step-content-modal[data-step=\"' + currentModalStep + '\"]');
+    const activeContent = document.querySelector('.step-content-modal[data-step="' + currentModalStep + '"]');
     if (activeContent) {
         activeContent.classList.add('active');
     }
@@ -127,7 +159,7 @@ if (document.getElementById('modalNuevoCliente')) {
             if (statusInput) statusInput.value = 'Solvente';
             
             document.querySelectorAll('.status-card-modal').forEach(c => c.classList.remove('selected'));
-            const solventeCard = document.querySelector('.status-card-modal[data-status=\"Solvente\"]');
+            const solventeCard = document.querySelector('.status-card-modal[data-status="Solvente"]');
             if (solventeCard) solventeCard.classList.add('selected');
         });
     }
@@ -146,7 +178,7 @@ if (document.getElementById('modalNuevoCliente')) {
         if (statusInput) statusInput.value = 'Solvente';
         
         document.querySelectorAll('.status-card-modal').forEach(c => c.classList.remove('selected'));
-        const solventeCard = document.querySelector('.status-card-modal[data-status=\"Solvente\"]');
+        const solventeCard = document.querySelector('.status-card-modal[data-status="Solvente"]');
         if (solventeCard) {
             solventeCard.classList.add('selected');
         }
@@ -178,16 +210,16 @@ if (document.getElementById('modalActualizarPrecioParalelo')) {
         
         // Deshabilitar botón
         this.disabled = true;
-        this.innerHTML = '<span class=\"spinner-border spinner-border-sm me-2\"></span>Actualizando...';
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
         
         // Preparar datos del formulario
         const formData = new FormData();
         formData.append('precio_paralelo', precio);
         formData.append('observaciones', observaciones);
-        formData.append('" . Yii::$app->request->csrfParam . "', '" . Yii::$app->request->csrfToken . "');
+        formData.append('{$csrfParam}', '{$csrfToken}');
         
         // Enviar datos
-        fetch('" . \yii\helpers\Url::to(['site/update-parallel-dollar-rate']) . "', {
+        fetch('{$urlUpdateParallel}', {
             method: 'POST',
             body: formData
         })
@@ -207,14 +239,14 @@ if (document.getElementById('modalActualizarPrecioParalelo')) {
             } else {
                 alert('Error al actualizar el precio: ' + (data.message || 'Error desconocido'));
                 document.getElementById('btn-confirmar-actualizacion-precio').disabled = false;
-                document.getElementById('btn-confirmar-actualizacion-precio').innerHTML = '<i class=\"bi bi-check-circle\"></i> Actualizar Precio';
+                document.getElementById('btn-confirmar-actualizacion-precio').innerHTML = '<i class="bi bi-check-circle"></i> Actualizar Precio';
             }
         })
         .catch(error => {
             console.error('Error:', error);
             alert('Error al actualizar el precio paralelo');
             document.getElementById('btn-confirmar-actualizacion-precio').disabled = false;
-            document.getElementById('btn-confirmar-actualizacion-precio').innerHTML = '<i class=\"bi bi-check-circle\"></i> Actualizar Precio';
+            document.getElementById('btn-confirmar-actualizacion-precio').innerHTML = '<i class="bi bi-check-circle"></i> Actualizar Precio';
         });
     });
     
@@ -236,7 +268,7 @@ if (document.getElementById('modalCierreInventario')) {
         document.getElementById('btn-confirmar-cierre').disabled = true;
         
         // Hacer petición AJAX para obtener los datos
-        fetch('" . \yii\helpers\Url::to(['historico-inventarios/get-data-cierre']) . "', {
+        fetch('{$urlGetDataCierre}', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -291,7 +323,7 @@ if (document.getElementById('modalCierreInventario')) {
         
         // Deshabilitar botón
         this.disabled = true;
-        this.innerHTML = '<span class=\"spinner-border spinner-border-sm me-2\"></span>Registrando...';
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
         
         // Función helper para convertir datetime-local a formato MySQL
         // De 'YYYY-MM-DDTHH:MM' a 'YYYY-MM-DD HH:MM:SS'
@@ -309,10 +341,10 @@ if (document.getElementById('modalCierreInventario')) {
         formData.append('valor', document.getElementById('cierre-valor').value);
         formData.append('nota', document.getElementById('cierre-nota').value);
         formData.append('confirmar_cierre', document.getElementById('cierre-confirmar').checked ? '1' : '0');
-        formData.append('" . Yii::$app->request->csrfParam . "', '" . Yii::$app->request->csrfToken . "');
+        formData.append('{$csrfParam}', '{$csrfToken}');
         
         // Enviar datos
-        fetch('" . \yii\helpers\Url::to(['historico-inventarios/registrar-cierre']) . "', {
+        fetch('{$urlRegistrarCierre}', {
             method: 'POST',
             body: formData
         })
@@ -326,18 +358,18 @@ if (document.getElementById('modalCierreInventario')) {
                 modal.hide();
                 
                 // Redirigir a la vista del inventario cerrado o recargar la página
-                window.location.href = '" . \yii\helpers\Url::to(['historico-inventarios/index']) . "';
+                window.location.href = '{$urlIndexInventarios}';
             } else {
                 alert('Error al registrar el cierre: ' + (data.message || 'Error desconocido'));
                 document.getElementById('btn-confirmar-cierre').disabled = false;
-                document.getElementById('btn-confirmar-cierre').innerHTML = '<i class=\"bi bi-check-circle\"></i> Registrar Cierre';
+                document.getElementById('btn-confirmar-cierre').innerHTML = '<i class="bi bi-check-circle"></i> Registrar Cierre';
             }
         })
         .catch(error => {
             console.error('Error:', error);
             alert('Error al registrar el cierre de inventario');
             document.getElementById('btn-confirmar-cierre').disabled = false;
-            document.getElementById('btn-confirmar-cierre').innerHTML = '<i class=\"bi bi-check-circle\"></i> Registrar Cierre';
+            document.getElementById('btn-confirmar-cierre').innerHTML = '<i class="bi bi-check-circle"></i> Registrar Cierre';
         });
     });
     
@@ -404,63 +436,30 @@ if (document.getElementById('modalRecordatorioCobros')) {
     // Variables globales para control del modal
     let modalRecordatorioAbierto = false;
     
-    // Función para verificar si estamos en una fecha válida para mostrar el modal
-    function esFechaValidaParaModal() {
-        const hoy = new Date();
-        const dia = hoy.getDate();
-        
-        // Días 1, 2, 3 o día 15 de cualquier mes
-        return (dia >= 1 && dia <= 3) || dia === 15;
-    }
-    
-    // Función para obtener la fecha actual en formato Y-m-d
-    function getFechaActual() {
-        const hoy = new Date();
-        const year = hoy.getFullYear();
-        const month = String(hoy.getMonth() + 1).padStart(2, '0');
-        const day = String(hoy.getDate()).padStart(2, '0');
-        return year + '-' + month + '-' + day;
-    }
-    
     // Función para verificar si el usuario puede ver el modal
     function puedeVerModal() {
-        const userIsGuest = " . ($userIsGuest ? 'true' : 'false') . ";
-        const modalClosed = '" . $modalClosed . "';
-        const dateModalClosed = '" . $dateModalClosed . "';
+        const userIsGuest = {$userIsGuestJS};
         
+        // Verificar que el usuario no sea invitado
         if (userIsGuest) {
             return false;
         }
         
-        const fechaActual = getFechaActual();
+        // Verificar si el modal ya fue mostrado en esta sesión del navegador
+        // sessionStorage se mantiene mientras la pestaña está abierta
+        // y se limpia cuando se cierra la pestaña/ventana
+        const yaSeVio = sessionStorage.getItem('modalCobrosMostrado');
         
-        // Si el modal fue cerrado hoy, no mostrarlo
-        if (modalClosed === '1' && dateModalClosed) {
-            const fechaCierre = dateModalClosed.split(' ')[0]; // Obtener solo la fecha
-            if (fechaCierre === fechaActual) {
-                return false;
-            }
+        if (yaSeVio === 'true') {
+            return false;
         }
         
-        // Si estamos en una fecha válida, resetear el estado si es necesario
-        if (esFechaValidaParaModal() && modalClosed === '1') {
-            // Resetear el estado del modal
-            fetch('" . \yii\helpers\Url::to(['site/reset-modal-cobros']) . "', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: '" . Yii::$app->request->csrfParam . "=" . Yii::$app->request->csrfToken . "'
-            });
-            return true;
-        }
-        
-        return esFechaValidaParaModal();
+        return true;
     }
     
     // Función para cargar clientes con facturas pendientes
     function cargarClientesPendientes() {
-        fetch('" . \yii\helpers\Url::to(['site/get-clientes-pendientes']) . "', {
+        fetch('{$urlGetClientesPendientes}', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -475,6 +474,10 @@ if (document.getElementById('modalRecordatorioCobros')) {
                 // Ocultar loading y mostrar contenido
                 document.getElementById('loading-cobros-pendientes').style.display = 'none';
                 document.getElementById('contenido-cobros-pendientes').style.display = 'block';
+                
+                // Marcar en sessionStorage que el modal ya fue mostrado en esta sesión
+                // Esto previene que aparezca en cada navegación interna
+                sessionStorage.setItem('modalCobrosMostrado', 'true');
                 
                 // Abrir el modal
                 const modal = new bootstrap.Modal(document.getElementById('modalRecordatorioCobros'));
@@ -495,31 +498,69 @@ if (document.getElementById('modalRecordatorioCobros')) {
         const accordion = document.getElementById('accordionClientesPendientes');
         accordion.innerHTML = '';
         
+        
         clientes.forEach((cliente, index) => {
             const clienteId = 'cliente-' + cliente.id;
-            const totalPendiente = cliente.facturas.reduce((sum, f) => sum + parseFloat(f.saldo_pendiente), 0);
             const statusBadgeClass = cliente.status === 'Moroso' ? 'bg-danger' : 'bg-warning text-dark';
+            
+            // Calcular sumas por moneda
+            const sumsByCurrency = {
+                'USDT': 0,
+                'BCV': 0,
+                'VES': 0
+            };
+            
+            cliente.facturas.forEach(f => {
+                const currency = f.currency || 'USDT';
+                sumsByCurrency[currency] += parseFloat(f.saldo_pendiente);
+            });
+            
+            // Detectar qué monedas están presentes
+            const currencies = Object.keys(sumsByCurrency).filter(curr => sumsByCurrency[curr] > 0);
+            
+            // Generar el display de moneda
+            let currencyDisplay = '';
+            if (currencies.length === 1) {
+                // Una sola moneda
+                currencyDisplay = currencies[0];
+            } else {
+                // Múltiples monedas: mostrar desglose
+                const parts = [];
+                if (sumsByCurrency['USDT'] > 0) {
+                    parts.push(`\${sumsByCurrency['USDT'].toFixed(2)} (USDT)`);
+                }
+                if (sumsByCurrency['BCV'] > 0) {
+                    parts.push(`\${sumsByCurrency['BCV'].toFixed(2)} (BCV)`);
+                }
+                if (sumsByCurrency['VES'] > 0) {
+                    parts.push(`\${sumsByCurrency['VES'].toFixed(2)} (VES)`);
+                }
+                currencyDisplay = parts.join(' | ');
+            }
+            
+            // Calcular total general (suma de todas las monedas)
+            const totalPendiente = currencies.reduce((sum, curr) => sum + sumsByCurrency[curr], 0);
             
             const accordionItem = document.createElement('div');
             accordionItem.className = 'accordion-item cliente-accordion-item';
             accordionItem.innerHTML = `
-                <h2 class=\"accordion-header cliente-accordion-header\" id=\"heading-\${clienteId}\">
-                    <button class=\"accordion-button cliente-accordion-button collapsed\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#collapse-\${clienteId}\" aria-expanded=\"false\" aria-controls=\"collapse-\${clienteId}\">
-                        <div class=\"d-flex align-items-center justify-content-between w-100\">
-                            <div class=\"d-flex align-items-center gap-2\">
-                                <i class=\"bi bi-person-fill\"></i>
+                <h2 class="accordion-header cliente-accordion-header" id="heading-\${clienteId}">
+                    <button class="accordion-button cliente-accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-\${clienteId}" aria-expanded="false" aria-controls="collapse-\${clienteId}">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-person-fill"></i>
                                 <span>\${cliente.nombre}</span>
-                                <span class=\"badge \${statusBadgeClass} cliente-info-badge\">\${cliente.status}</span>
+                                <span class="badge \${statusBadgeClass} cliente-info-badge">\${cliente.status}</span>
                             </div>
-                            <div class=\"text-end me-3\">
-                                <small class=\"text-muted d-block\">Total Pendiente:</small>
-                                <strong class=\"text-danger\">$\${totalPendiente.toFixed(2)}</strong>
+                            <div class="text-end me-3">
+                                <small class="text-muted d-block">Total Pendiente:</small>
+                                \${currencies.length === 1 ? `<strong class="text-danger">$\${totalPendiente.toFixed(2)}</strong><br><small class="text-muted" style="font-size: 0.7rem;">\${currencyDisplay}</small>` : `<small class="text-muted" style="font-size: 0.7rem;">\${currencyDisplay}</small>`}
                             </div>
                         </div>
                     </button>
                 </h2>
-                <div id=\"collapse-\${clienteId}\" class=\"accordion-collapse collapse\" aria-labelledby=\"heading-\${clienteId}\" data-bs-parent=\"#accordionClientesPendientes\">
-                    <div class=\"accordion-body\" style=\"padding: 25px;\">
+                <div id="collapse-\${clienteId}" class="accordion-collapse collapse" aria-labelledby="heading-\${clienteId}" data-bs-parent="#accordionClientesPendientes">
+                    <div class="accordion-body" style="padding: 25px;">
                         \${renderFacturasCliente(cliente.facturas)}
                     </div>
                 </div>
@@ -534,39 +575,49 @@ if (document.getElementById('modalRecordatorioCobros')) {
         let html = '';
         
         facturas.forEach(factura => {
-            const facturaUrl = '" . \yii\helpers\Url::to(['facturas/view', 'id' => '__ID__']) . "'.replace('__ID__', factura.id);
+            const facturaUrl = '{$urlFacturaView}'.replace('__ID__', factura.id);
+            const currency = factura.currency || 'USDT'; // Default to USDT if not specified
             
             html += `
-                <div class=\"factura-item\" onclick=\"window.location.href='\${facturaUrl}'\">
-                    <div class=\"factura-header\">
-                        <div class=\"factura-codigo\">
-                            <i class=\"bi bi-receipt\"></i> \${factura.codigo}
+                <div class="factura-item" onclick="window.location.href='\${facturaUrl}'">
+                    <div class="factura-header">
+                        <div class="factura-codigo">
+                            <i class="bi bi-receipt"></i> \${factura.codigo}
                         </div>
-                        <span class=\"factura-status-badge\">
-                            <i class=\"bi bi-exclamation-circle\"></i> Pendiente
+                        <span class="factura-status-badge">
+                            <i class="bi bi-exclamation-circle"></i> Pendiente
                         </span>
                     </div>
                     
-                    \${factura.concepto ? `<p class=\"text-muted mb-3\"><i class=\"bi bi-file-text me-2\"></i>\${factura.concepto}</p>` : ''}
+                    \${factura.concepto ? `<p class="text-muted mb-3"><i class="bi bi-file-text me-2"></i>\${factura.concepto}</p>` : ''}
                     
-                    <div class=\"factura-details\">
-                        <div class=\"factura-detail-item\">
-                            <div class=\"factura-detail-label\">Monto Total</div>
-                            <div class=\"factura-detail-value total\">$\${parseFloat(factura.monto_final).toFixed(2)}</div>
+                    <div class="factura-details">
+                        <div class="factura-detail-item">
+                            <div class="factura-detail-label">Monto Total</div>
+                            <div class="factura-detail-value total">
+                                $\${parseFloat(factura.monto_final).toFixed(2)}
+                                <br><small class="text-muted" style="font-size: 0.75rem;">\${currency}</small>
+                            </div>
                         </div>
-                        <div class=\"factura-detail-item\">
-                            <div class=\"factura-detail-label\">Total Pagado</div>
-                            <div class=\"factura-detail-value pagado\">$\${parseFloat(factura.total_pagado).toFixed(2)}</div>
+                        <div class="factura-detail-item">
+                            <div class="factura-detail-label">Total Pagado</div>
+                            <div class="factura-detail-value pagado">
+                                $\${parseFloat(factura.total_pagado).toFixed(2)}
+                                <br><small class="text-muted" style="font-size: 0.75rem;">\${currency}</small>
+                            </div>
                         </div>
-                        <div class=\"factura-detail-item\">
-                            <div class=\"factura-detail-label\">Saldo Pendiente</div>
-                            <div class=\"factura-detail-value pendiente\">$\${parseFloat(factura.saldo_pendiente).toFixed(2)}</div>
+                        <div class="factura-detail-item">
+                            <div class="factura-detail-label">Saldo Pendiente</div>
+                            <div class="factura-detail-value pendiente">
+                                $\${parseFloat(factura.saldo_pendiente).toFixed(2)}
+                                <br><small class="text-muted" style="font-size: 0.75rem;">\${currency}</small>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class=\"text-end mt-3\">
-                        <small class=\"text-muted\">
-                            <i class=\"bi bi-calendar\"></i> Fecha: \${factura.fecha}
+                    <div class="text-end mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> Fecha: \${factura.fecha}
                         </small>
                     </div>
                 </div>
@@ -576,43 +627,175 @@ if (document.getElementById('modalRecordatorioCobros')) {
         return html;
     }
     
+    // ============================================================
+    // BELL NOTIFICATION HANDLER
+    // ============================================================
+    
+    // Global variable to store pending count
+    let pendingInvoicesCount = 0;
+    
+    // Function to update bell notification badge (both desktop and mobile)
+    function updateBellNotification(count) {
+        // Desktop bell elements
+        const bellIcon = document.getElementById('bell-icon');
+        const bellDot = document.getElementById('bell-notification-dot');
+        const bellCount = document.getElementById('bell-notification-count');
+        
+        // Mobile bell elements
+        const bellIconMobile = document.getElementById('bell-icon-mobile');
+        const bellDotMobile = document.getElementById('bell-notification-dot-mobile');
+        const bellCountMobile = document.getElementById('bell-notification-count-mobile');
+        
+        pendingInvoicesCount = count;
+        
+        // Update desktop bell
+        if (bellIcon && bellDot && bellCount) {
+            if (count > 0) {
+                bellDot.style.display = 'block';
+                bellCount.textContent = count;
+                bellCount.style.display = 'block';
+                bellIcon.style.color = '#dc3545';
+            } else {
+                bellDot.style.display = 'none';
+                bellCount.style.display = 'none';
+                bellIcon.style.color = '#6c757d';
+            }
+        }
+        
+        // Update mobile bell
+        if (bellIconMobile && bellDotMobile && bellCountMobile) {
+            if (count > 0) {
+                bellDotMobile.style.display = 'block';
+                bellCountMobile.textContent = count;
+                bellCountMobile.style.display = 'block';
+                bellIconMobile.style.color = '#dc3545';
+            } else {
+                bellDotMobile.style.display = 'none';
+                bellCountMobile.style.display = 'none';
+                bellIconMobile.style.color = '#6c757d';
+            }
+        }
+    }
+    
+    // Function to check for pending invoices (silent check, no modal)
+    function checkPendingInvoices() {
+        const userIsGuest = {$userIsGuestJS};
+        
+        if (userIsGuest) {
+            return;
+        }
+        
+        fetch('{$urlGetClientesPendientes}', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data.length > 0) {
+                // Count total clients with pending invoices (not total invoices)
+                let totalPendingClients = data.data.length;
+                
+                // Update bell notification with client count
+                updateBellNotification(totalPendingClients);
+            } else {
+                // No pending invoices
+                updateBellNotification(0);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking pending invoices:', error);
+        });
+    }
+    
+    // Handle bell icon click (Desktop)
+    const bellContainer = document.getElementById('bell-notification-container');
+    if (bellContainer) {
+        bellContainer.addEventListener('click', function() {
+            // Add hover effect
+            const bellIcon = document.getElementById('bell-icon');
+            if (bellIcon) {
+                bellIcon.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    bellIcon.style.transform = 'scale(1)';
+                }, 200);
+            }
+            
+            // Open the modal directly
+            if (puedeVerModal()) {
+                cargarClientesPendientes();
+            } else {
+                // If modal was already shown, allow re-opening via bell click
+                // Reset the sessionStorage flag temporarily
+                sessionStorage.removeItem('modalCobrosMostrado');
+                cargarClientesPendientes();
+            }
+        });
+        
+        // Add hover effect
+        bellContainer.addEventListener('mouseenter', function() {
+            const bellIcon = document.getElementById('bell-icon');
+            if (bellIcon) {
+                bellIcon.style.transform = 'rotate(15deg)';
+            }
+        });
+        
+        bellContainer.addEventListener('mouseleave', function() {
+            const bellIcon = document.getElementById('bell-icon');
+            if (bellIcon) {
+                bellIcon.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+    
+    // Handle bell icon click (Mobile)
+    const bellContainerMobile = document.getElementById('bell-notification-container-mobile');
+    if (bellContainerMobile) {
+        bellContainerMobile.addEventListener('click', function() {
+            // Add hover effect
+            const bellIconMobile = document.getElementById('bell-icon-mobile');
+            if (bellIconMobile) {
+                bellIconMobile.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    bellIconMobile.style.transform = 'scale(1)';
+                }, 200);
+            }
+            
+            // Open the modal directly
+            if (puedeVerModal()) {
+                cargarClientesPendientes();
+            } else {
+                // If modal was already shown, allow re-opening via bell click
+                // Reset the sessionStorage flag temporarily
+                sessionStorage.removeItem('modalCobrosMostrado');
+                cargarClientesPendientes();
+            }
+        });
+    }
+    
+    // Check for pending invoices on page load (silent check)
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            checkPendingInvoices();
+        }, 500);
+    });
+    
+    // ============================================================
+    
     // Evento cuando se cierra el modal
     document.getElementById('modalRecordatorioCobros').addEventListener('hidden.bs.modal', function() {
-        if (modalRecordatorioAbierto) {
-            // Marcar el modal como cerrado para este usuario
-            fetch('" . \yii\helpers\Url::to(['site/cerrar-modal-cobros']) . "', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: '" . Yii::$app->request->csrfParam . "=" . Yii::$app->request->csrfToken . "'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Modal cerrado y registrado');
-                }
-            })
-            .catch(error => {
-                console.error('Error al cerrar modal:', error);
-            });
-            
-            modalRecordatorioAbierto = false;
-        }
+        // Simplemente resetear la bandera cuando se cierra
+        // Ya no registramos el cierre en el servidor porque queremos que aparezca cada vez
+        modalRecordatorioAbierto = false;
     });
     
     // Verificar y abrir el modal cuando se carga la página
-    " . (!$userIsGuest && $userIdentity ? "
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            if (puedeVerModal()) {
-                cargarClientesPendientes();
-            }
-        }, 1000); // Esperar 1 segundo después de cargar la página
-    });
-    " : "") . "
+    {$loadEventListener}
 }
-", \yii\web\View::POS_END);
+
+JS
+, \yii\web\View::POS_END);
 
 
 //MODAL DE GENERACION DE REPORTE

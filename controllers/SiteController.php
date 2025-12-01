@@ -649,6 +649,7 @@ class SiteController extends Controller
                             'total_pagado' => $totalCobrado,
                             'saldo_pendiente' => $factura->monto_final - $totalCobrado,
                             'fecha' => $factura->fecha,
+                            'currency' => $factura->currency, // Add currency field
                         ];
                     }
                 }

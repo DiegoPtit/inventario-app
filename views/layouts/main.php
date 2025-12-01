@@ -57,7 +57,25 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dis
             </div>
         </a>
         <?php if (!Yii::$app->user->isGuest): ?>
-            <div class="mt-1">
+            <div class="mt-3 d-flex flex-column align-items-center gap-2">
+                <!-- Bell Icon with Notification -->
+                <div class="position-relative" id="bell-notification-container" style="cursor: pointer;">
+                    <i class="bi bi-bell-fill fs-4" id="bell-icon" style="color: #6c757d; transition: all 0.3s ease;"></i>
+                    <!-- Red Micro-Dot Indicator (hidden by default) -->
+                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" 
+                          id="bell-notification-dot" 
+                          style="display: none; width: 10px; height: 10px;">
+                        <span class="visually-hidden">Pending payments</span>
+                    </span>
+                    <!-- Badge with count -->
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                          id="bell-notification-count" 
+                          style="display: none; font-size: 0.65rem; padding: 0.25em 0.45em;">
+                        0
+                    </span>
+                </div>
+                
+                <!-- User Name -->
                 <strong class="d-block text-center" style="font-size: 0.95rem; color: #495057;">
                     <?= Html::encode(Yii::$app->user->identity->nombre) ?>
                 </strong>
@@ -122,6 +140,13 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dis
     
     <!-- Sidebar Footer - Login/Logout -->
     <div class="sidebar-footer p-3" style="border-top: 1px solid rgba(0, 0, 0, 0.08);">
+        <?php if (!Yii::$app->user->isGuest): ?>
+            <!-- Dollar Price Widget -->
+            <div class="mb-3 d-flex justify-content-center">
+                <?= DollarPriceWidget::widget() ?>
+            </div>
+        <?php endif; ?>
+        
         <?php if (Yii::$app->user->isGuest): ?>
             <a href="<?= Yii::$app->urlManager->createUrl(['site/login']) ?>" class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2">
                 <i class="bi bi-person-circle"></i>
@@ -177,7 +202,26 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dis
                     </a>
                 <?php endif; ?>
             </div>
-            <div class="d-flex align-items-center" style="transform: scale(0.85); transform-origin: center;">
+            <div class="d-flex align-items-center gap-3" style="transform: scale(0.85); transform-origin: center;">
+                <?php if (!Yii::$app->user->isGuest): ?>
+                    <!-- Bell Icon with Notification (Mobile) -->
+                    <div class="position-relative" id="bell-notification-container-mobile" style="cursor: pointer;">
+                        <i class="bi bi-bell-fill fs-4" id="bell-icon-mobile" style="color: #6c757d; transition: all 0.3s ease;"></i>
+                        <!-- Red Micro-Dot Indicator (hidden by default) -->
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" 
+                              id="bell-notification-dot-mobile" 
+                              style="display: none; width: 8px; height: 8px;">
+                            <span class="visually-hidden">Pending payments</span>
+                        </span>
+                        <!-- Badge with count -->
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                              id="bell-notification-count-mobile" 
+                              style="display: none; font-size: 0.6rem; padding: 0.2em 0.4em;">
+                            0
+                        </span>
+                    </div>
+                <?php endif; ?>
+                
                 <?= DollarPriceWidget::widget() ?>
             </div>
         </div>

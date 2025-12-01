@@ -1,6 +1,7 @@
 <?php
 
 use yii\helpers\Html;
+use yii\helpers\Json;
 
 $precios = [];
 if ($precioOficial) {
@@ -22,16 +23,17 @@ if ($precioParalelo) {
 if (empty($precios)) {
     return;
 }
+
+// Convertir a JSON para JavaScript
+$preciosJson = Json::encode($precios);
 ?>
 
 <div id="dollar-price-widget" class="dollar-price-container" onclick="handleDollarPriceClick()" style="cursor: pointer;" title="Hacer clic para actualizar precio paralelo">
-    <?php foreach ($precios as $index => $precio): ?>
-        <div class="dollar-price-item <?= $index === 0 ? 'active' : '' ?>" data-index="<?= $index ?>">
-            <span class="dollar-price-value"><?= Html::encode($precio['precio']) ?></span>
-            <span class="dollar-price-label">TASA:</span>
-            <span class="dollar-price-type <?= $precio['class'] ?>"><?= Html::encode($precio['tipo']) ?></span>
-        </div>
-    <?php endforeach; ?>
+    <div class="dollar-price-display">
+        <span class="dollar-price-value" id="dpw-value"></span>
+        <span class="dollar-price-label">TASA:</span>
+        <span class="dollar-price-type" id="dpw-type"></span>
+    </div>
 </div>
 
 <style>
@@ -57,25 +59,19 @@ if (empty($precios)) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.dollar-price-item {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+.dollar-price-display {
     display: flex;
     align-items: center;
     gap: 6px;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
     font-size: 0.85rem;
     font-weight: 600;
     white-space: nowrap;
-    width: 100%;
-    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.4s ease-in-out;
 }
 
-.dollar-price-item.active {
-    opacity: 1;
+.dollar-price-display.fade-out {
+    opacity: 0;
 }
 
 .dollar-price-value {
@@ -99,6 +95,10 @@ if (empty($precios)) {
     color: #90EE90 !important; /* Verde claro para precio oficial */
 }
 
+.text-warning {
+    color: #ffc107 !important; /* Amarillo para precio paralelo */
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .dollar-price-container {
@@ -107,7 +107,7 @@ if (empty($precios)) {
         height: 32px;
     }
     
-    .dollar-price-item {
+    .dollar-price-display {
         font-size: 0.75rem;
         gap: 4px;
     }
@@ -119,108 +119,167 @@ if (empty($precios)) {
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const items = document.querySelectorAll('.dollar-price-item');
-    let currentIndex = 0;
-    let updateTimer;
-    let fadeTimer;
+(function() {
+    'use strict';
     
-    // Función para alternar entre precios
-    function showNext() {
-        if (items.length <= 1) return;
+    // Widget state - MANTIENE ESTADO EN JAVASCRIPT
+    const DollarPriceWidget = {
+        precios: <?= $preciosJson ?>,
+        currentIndex: 0,
+        fadeTimer: null,
+        updateTimer: null,
+        isUpdating: false,
         
-        // Ocultar actual
-        items[currentIndex].classList.remove('active');
+        // Elementos del DOM
+        elements: {
+            display: null,
+            value: null,
+            type: null
+        },
         
-        // Mostrar siguiente
-        currentIndex = (currentIndex + 1) % items.length;
-        items[currentIndex].classList.add('active');
-    }
-    
-    // Función para actualizar precio oficial desde la API del BCV
-    function updateDollarRates() {
-        // Solo actualizar precio oficial (BCV)
-        fetch('<?= \yii\helpers\Url::to(['site/update-dollar-rate']) ?>', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
+        // Inicializar widget
+        init: function() {
+            // Obtener elementos del DOM
+            this.elements.display = document.querySelector('.dollar-price-display');
+            this.elements.value = document.getElementById('dpw-value');
+            this.elements.type = document.getElementById('dpw-type');
+            
+            if (!this.elements.display || !this.elements.value || !this.elements.type) {
+                console.error('DollarPriceWidget: No se encontraron elementos del DOM');
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log('Precio oficial actualizado:', data.data.precio);
-                // Si se actualizó el precio, recargar los datos del widget
-                if (data.data.actualizado) {
-                    refreshWidgetData();
-                }
+            
+            // Mostrar el primer precio
+            this.updateDisplay(false);
+            
+            // Iniciar rotación si hay más de un precio
+            if (this.precios.length > 1) {
+                this.fadeTimer = setInterval(() => this.rotate(), 8000);
+            }
+            
+            // Actualizar precios desde el servidor cada 15 segundos
+            this.updateTimer = setInterval(() => this.fetchPrices(), 15000);
+            
+            // Limpiar timers al salir
+            window.addEventListener('beforeunload', () => this.cleanup());
+            
+            console.log('DollarPriceWidget: Inicializado con', this.precios.length, 'precio(s)');
+        },
+        
+        // Actualizar la visualización
+        updateDisplay: function(withFade = true) {
+            if (this.precios.length === 0) {
+                console.warn('DollarPriceWidget: No hay precios para mostrar');
+                return;
+            }
+            
+            const precio = this.precios[this.currentIndex];
+            
+            if (!precio) {
+                console.error('DollarPriceWidget: Precio no encontrado en índice', this.currentIndex);
+                return;
+            }
+            
+            const updateContent = () => {
+                this.elements.value.textContent = precio.precio;
+                this.elements.type.textContent = precio.tipo;
+                this.elements.type.className = 'dollar-price-type ' + precio.class;
+            };
+            
+            if (withFade && !this.isUpdating) {
+                // Fade out
+                this.elements.display.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    // Actualizar contenido
+                    updateContent();
+                    
+                    // Fade in
+                    this.elements.display.classList.remove('fade-out');
+                }, 400);
             } else {
-                console.warn('Error al actualizar precio oficial:', data.message);
+                // Sin animación
+                updateContent();
             }
-        })
-        .catch(error => {
-            console.error('Error al actualizar precio oficial:', error);
-        });
-    }
-    
-    // Función para refrescar los datos del widget
-    function refreshWidgetData() {
-        fetch('<?= \yii\helpers\Url::to(['site/dollar-prices']) ?>', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.data.length > 0) {
-                // Actualizar el contenido del widget
-                const container = document.getElementById('dollar-price-widget');
-                if (container) {
-                    // Limpiar items existentes
-                    container.querySelectorAll('.dollar-price-item').forEach(item => item.remove());
-                    
-                    // Agregar nuevos items
-                    data.data.forEach((precioData, index) => {
-                        const item = document.createElement('div');
-                        item.className = `dollar-price-item ${index === 0 ? 'active' : ''}`;
-                        item.setAttribute('data-index', index);
-                        item.innerHTML = `
-                            <span class="dollar-price-value">${precioData.precio}</span>
-                            <span class="dollar-price-label">TASA:</span>
-                            <span class="dollar-price-type ${precioData.class}">${precioData.tipo}</span>
-                        `;
-                        container.appendChild(item);
-                    });
-                    
-                    // Reiniciar el ciclo de fade
-                    currentIndex = 0;
-                    clearInterval(fadeTimer);
-                    if (data.data.length > 1) {
-                        fadeTimer = setInterval(showNext, 10000);
-                    }
+        },
+        
+        // Rotar al siguiente precio
+        rotate: function() {
+            if (this.precios.length <= 1) return;
+            
+            this.currentIndex = (this.currentIndex + 1) % this.precios.length;
+            this.updateDisplay(true);
+        },
+        
+        // Obtener precios actualizados del servidor
+        fetchPrices: function() {
+            if (this.isUpdating) return;
+            
+            this.isUpdating = true;
+            
+            fetch('<?= \yii\helpers\Url::to(['site/dollar-prices']) ?>', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
                 }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data && data.data.length > 0) {
+                    // Actualizar array de precios
+                    this.precios = data.data;
+                    
+                    // Si el índice actual está fuera de rango, resetearlo
+                    if (this.currentIndex >= this.precios.length) {
+                        this.currentIndex = 0;
+                    }
+                    
+                    // Actualizar display
+                    this.updateDisplay(false);
+                    
+                    // Re-iniciar rotación si es necesario
+                    if (this.precios.length > 1 && !this.fadeTimer) {
+                        this.fadeTimer = setInterval(() => this.rotate(), 8000);
+                    } else if (this.precios.length <= 1 && this.fadeTimer) {
+                        clearInterval(this.fadeTimer);
+                        this.fadeTimer = null;
+                    }
+                    
+                    console.log('DollarPriceWidget: Precios actualizados desde el servidor');
+                }
+            })
+            .catch(error => {
+                console.error('DollarPriceWidget: Error al obtener precios:', error);
+            })
+            .finally(() => {
+                this.isUpdating = false;
+            });
+        },
+        
+        // Limpiar timers
+        cleanup: function() {
+            if (this.fadeTimer) {
+                clearInterval(this.fadeTimer);
+                this.fadeTimer = null;
             }
-        })
-        .catch(error => {
-            console.error('Error al refrescar datos del widget:', error);
-        });
+            if (this.updateTimer) {
+                clearInterval(this.updateTimer);
+                this.updateTimer = null;
+            }
+            console.log('DollarPriceWidget: Limpieza completada');
+        }
+    };
+    
+    // Inicializar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => DollarPriceWidget.init());
+    } else {
+        DollarPriceWidget.init();
     }
     
-    // Inicializar timers
-    if (items.length > 1) {
-        fadeTimer = setInterval(showNext, 10000);
-    }
-    
-    // Actualizar precios cada 10 segundos
-    updateTimer = setInterval(updateDollarRates, 10000);
-    
-    // Limpiar timers cuando la página se descarga
-    window.addEventListener('beforeunload', function() {
-        if (fadeTimer) clearInterval(fadeTimer);
-        if (updateTimer) clearInterval(updateTimer);
-    });
-});
+    // Exponer para debugging
+    window.DollarPriceWidget = DollarPriceWidget;
+})();
 
 // Función global para manejar el clic en el widget de precio del dólar
 function handleDollarPriceClick() {

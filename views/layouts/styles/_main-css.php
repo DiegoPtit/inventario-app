@@ -1,7 +1,9 @@
 <?php
 
-// CSS para Fluent Design, modales y sidebar
-$this->registerCss("
+$css = <<<CSS
+
+/*NUEVO HEREDOC DE ESTILOS!!!*/
+
 /* Fluent Design - Efecto Blur para Header y Footer */
 .fluent-header {
     background: rgba(255, 255, 255, 0.7) !important;
@@ -345,99 +347,108 @@ $this->registerCss("
     margin-bottom: 5px;
 }
 
-/* Estilos para Modal de Recordatorio de Cobros */
+/* Estilos para Modal de Recordatorio de Cobros - Versión Sobria y Optimizada */
 .cliente-accordion-item {
-    margin-bottom: 15px;
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
     overflow: hidden;
 }
 
 .cliente-accordion-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: #f8f9fa;
     border: none;
 }
 
 .cliente-accordion-button {
     font-weight: 600;
-    font-size: 1.1rem;
-    padding: 20px;
+    font-size: 0.95rem;
+    padding: 14px 16px;
     background: transparent !important;
     box-shadow: none !important;
+    transition: all 0.2s ease;
 }
 
 .cliente-accordion-button:not(.collapsed) {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+    background: #fff9e6 !important;
     color: #856404;
 }
 
 .cliente-info-badge {
-    font-size: 0.85rem;
-    padding: 5px 12px;
-    border-radius: 20px;
-    margin-left: 10px;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 500;
 }
 
 .factura-item {
-    background: #f8f9fa;
-    border-left: 4px solid #dc3545;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-left: 3px solid #dc3545;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 10px;
     transition: all 0.2s;
     cursor: pointer;
 }
 
 .factura-item:hover {
-    background: #e9ecef;
-    transform: translateX(5px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: #f8f9fa;
+    border-color: #dc3545;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
 }
 
 .factura-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
+    gap: 8px;
 }
 
 .factura-codigo {
-    font-weight: 700;
-    font-size: 1.1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
     color: #2c3e50;
 }
 
 .factura-status-badge {
     background: #dc3545;
     color: white;
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 .factura-details {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
+    gap: 10px;
 }
 
 .factura-detail-item {
     text-align: center;
-    padding: 10px;
-    background: white;
-    border-radius: 8px;
+    padding: 8px 6px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
 }
 
 .factura-detail-label {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: #6c757d;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .factura-detail-value {
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
+    line-height: 1.2;
 }
 
 .factura-detail-value.total {
@@ -452,9 +463,58 @@ $this->registerCss("
     color: #ffc107;
 }
 
+/* Optimización para móviles */
 @media (max-width: 768px) {
     .factura-details {
         grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .factura-detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+    
+    .factura-detail-label {
+        font-size: 0.75rem;
+        margin-bottom: 0;
+    }
+    
+    .factura-detail-value {
+        font-size: 0.85rem;
+    }
+    
+    .factura-item {
+        padding: 12px;
+    }
+    
+    .factura-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .factura-codigo {
+        font-size: 0.9rem;
+    }
+    
+    .factura-status-badge {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+    }
+    
+    .cliente-accordion-button {
+        font-size: 0.9rem;
+        padding: 12px;
+    }
+    
+    .cliente-info-badge {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        margin-left: 0;
+        margin-top: 4px;
     }
 }
 
@@ -657,10 +717,8 @@ $this->registerCss("
 .step-content-lugar.active {
     display: block;
 }
-");
 
-//MODAL DE COBROS------------------------------------------------|
-$this->registerCss("
+/* Modal Detalles de Cobros */
 /* Estilos para Modal de Detalles de Cobros */
 .invoice-summary-modal {
     background: #f8f9fa;
@@ -883,4 +941,126 @@ $this->registerCss("
     font-size: 0.85rem;
     font-style: italic;
 }
-");
+
+/* ============================================================ */
+/* BELL NOTIFICATION STYLES */
+/* ============================================================ */
+
+/* Bell Icon Container */
+#bell-notification-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+#bell-notification-container:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+#bell-notification-container:active {
+    transform: scale(0.95);
+}
+
+/* Bell Icon */
+#bell-icon {
+    transition: all 0.3s ease;
+}
+
+/* Red Micro-Dot - Pulse Animation */
+#bell-notification-dot {
+    animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+}
+
+/* Notification Count Badge */
+#bell-notification-count {
+    animation: badge-bounce 0.5s ease;
+}
+
+@keyframes badge-bounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Shake animation for new notifications */
+@keyframes bell-shake {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+    20%, 40%, 60%, 80% { transform: rotate(10deg); }
+}
+
+.bell-shake {
+    animation: bell-shake 0.8s ease;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    #bell-notification-container {
+        padding: 6px;
+    }
+    
+    #bell-icon {
+        font-size: 1.2rem !important;
+    }
+    
+    #bell-notification-count {
+        font-size: 0.6rem !important;
+        padding: 0.2em 0.4em !important;
+    }
+    
+    #bell-notification-dot {
+        width: 8px !important;
+        height: 8px !important;
+    }
+}
+
+/* Mobile Bell Notification Specific Styles */
+#bell-notification-container-mobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+#bell-notification-container-mobile:active {
+    transform: scale(0.95);
+}
+
+#bell-icon-mobile {
+    transition: all 0.3s ease;
+}
+
+#bell-notification-dot-mobile {
+    animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+#bell-notification-count-mobile {
+    animation: badge-bounce 0.5s ease;
+}
+
+CSS;
+$this->registerCss($css);
