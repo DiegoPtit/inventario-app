@@ -402,7 +402,8 @@ class SiteController extends Controller
                 $precios[] = [
                     'precio' => number_format($precioOficial->precio_ves, 2, ',', '.'),
                     'tipo' => $precioOficial->displayTipo(),
-                    'class' => 'text-success'
+                    'class' => 'oficial',
+                    'icon' => 'bank'
                 ];
             }
 
@@ -410,7 +411,8 @@ class SiteController extends Controller
                 $precios[] = [
                     'precio' => number_format($precioParalelo->precio_ves, 2, ',', '.'),
                     'tipo' => $precioParalelo->displayTipo(),
-                    'class' => 'text-warning'
+                    'class' => 'paralelo',
+                    'icon' => 'currency-exchange'
                 ];
             }
 

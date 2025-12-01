@@ -1062,5 +1062,58 @@ $css = <<<CSS
     animation: badge-bounce 0.5s ease;
 }
 
+/* Mobile Dollar Price Display - Alternating Text */
+.mobile-dollar-price-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+    height: 32px;
+    background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+    border-radius: 16px;
+    padding: 6px 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.mobile-dollar-price-display:hover {
+    background: linear-gradient(135deg, #6c757d 0%, #868e96 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.mobile-price-text {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.mobile-price-text.fade-out {
+    opacity: 0;
+}
+
+.mobile-price-text.bcv {
+    color: #90EE90;
+}
+
+.mobile-price-text.paralelo {
+    color: #ffc107;
+}
+
+/* Animación de pulso sutil */
+@keyframes mobile-price-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+}
+
 CSS;
 $this->registerCss($css);

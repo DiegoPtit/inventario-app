@@ -1063,3 +1063,127 @@ $this->registerJs(<<<JS
 JS, \yii\web\View::POS_END);
 
 
+// Mobile Dollar Price Display - JavaScript
+$urlDollarPrices = \yii\helpers\Url::to(['site/dollar-prices']);
+
+$this->registerJs(<<<JS
+// ============================================================
+// MOBILE DOLLAR PRICE DISPLAY - Alternating Text
+// ============================================================
+(function() {
+    'use strict';
+    
+    const mobilePriceElement = document.getElementById('mobile-price-text');
+    
+    if (!mobilePriceElement) {
+        return; // Element doesn't exist, exit
+    }
+    
+    // State
+    let prices = [];
+    let currentIndex = 0;
+    let rotationTimer = null;
+    let updateTimer = null;
+    let isUpdating = false;
+    
+    // Fetch prices from server
+    function fetchPrices() {
+        if (isUpdating) return;
+        
+        isUpdating = true;
+        
+        fetch('$urlDollarPrices', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+                prices = data.data.map(p => ({
+                    text: p.class === 'oficial' ? 'BCV' : 'PARALELO',
+                    value: p.precio,
+                    class: p.class === 'oficial' ? 'bcv' : 'paralelo'
+                }));
+                
+                // Update display if we have prices
+                if (prices.length > 0) {
+                    updateDisplay(false);
+                    
+                    // Start rotation if we have more than one price
+                    if (prices.length > 1 && !rotationTimer) {
+                        rotationTimer = setInterval(rotatePrices, 4000);
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching dollar prices:', error);
+        })
+        .finally(() => {
+            isUpdating = false;
+        });
+    }
+    
+    // Update the display
+    function updateDisplay(withFade = true) {
+        if (prices.length === 0) return;
+        
+        const price = prices[currentIndex];
+        
+        const updateContent = () => {
+            mobilePriceElement.textContent = price.text + ': ' + price.value;
+            mobilePriceElement.className = 'mobile-price-text ' + price.class;
+        };
+        
+        if (withFade) {
+            // Fade out
+            mobilePriceElement.classList.add('fade-out');
+            
+            setTimeout(() => {
+                // Update content
+                updateContent();
+                
+                // Fade in
+                mobilePriceElement.classList.remove('fade-out');
+            }, 500);
+        } else {
+            // No animation
+            updateContent();
+        }
+    }
+    
+    // Rotate to next price
+    function rotatePrices() {
+        if (prices.length <= 1) return;
+        
+        currentIndex = (currentIndex + 1) % prices.length;
+        updateDisplay(true);
+    }
+    
+    // Cleanup function
+    function cleanup() {
+        if (rotationTimer) {
+            clearInterval(rotationTimer);
+            rotationTimer = null;
+        }
+        if (updateTimer) {
+            clearInterval(updateTimer);
+            updateTimer = null;
+        }
+    }
+    
+    // Initialize
+    fetchPrices();
+    
+    // Update prices from server every 15 seconds
+    updateTimer = setInterval(fetchPrices, 15000);
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', cleanup);
+    
+})();
+JS
+, \yii\web\View::POS_END);
+

@@ -220,9 +220,16 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dis
                             0
                         </span>
                     </div>
+                    
+                    <!-- Mobile Dollar Price Display (alternating text) -->
+                    <div id="mobile-dollar-price" 
+                         class="mobile-dollar-price-display" 
+                         onclick="openUpdatePriceModal()" 
+                         style="cursor: pointer;"
+                         title="Toca para actualizar precio paralelo">
+                        <span id="mobile-price-text" class="mobile-price-text"></span>
+                    </div>
                 <?php endif; ?>
-                
-                <?= DollarPriceWidget::widget() ?>
             </div>
         </div>
     </div>
