@@ -437,6 +437,29 @@ foreach ($stocks as $stock) {
     color: white;
 }
 
+/* Sección de Código de Barras */
+.barcode-section {
+    width: 100%;
+    margin: 40px 0 30px 0;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+}
+
+.barcode-contenedor {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.barcode-contenedor svg {
+    max-width: 100%;
+    height: auto;
+}
+
 @media (max-width: 768px) {
     .especificaciones-grid {
         grid-template-columns: 1fr;
@@ -970,6 +993,15 @@ foreach ($stocks as $stock) {
         </div>
     </div>
 
+    <!-- CÓDIGO DE BARRAS DEL PRODUCTO -->
+    <?php if (!empty($model->codigo_barra)): ?>
+        <div class="barcode-section">
+            <div class="barcode-contenedor">
+                <svg id="barcode-producto"></svg>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- FOOTER - BOTONES DE ACCIÓN -->
     <div class="producto-footer">
         <a href="<?= Url::to(['update', 'id' => $model->id]) ?>" class="btn btn-action btn-editar">
@@ -1072,5 +1104,41 @@ if (!empty($stockPorLugar)) {
 })();
 JS;
     $this->registerJs($js, \yii\web\View::POS_END);
+}
+
+// Generar código de barras si existe
+if (!empty($model->codigo_barra)) {
+    $this->registerJsFile('https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js', [
+        'position' => \yii\web\View::POS_END
+    ]);
+    
+    $codigoBarra = $model->codigo_barra;
+    $jsBarcodeScript = <<<JS
+(function() {
+    function initBarcode() {
+        const barcodeElement = document.getElementById('barcode-producto');
+        if (barcodeElement && typeof JsBarcode !== 'undefined') {
+            JsBarcode("#barcode-producto", "$codigoBarra", {
+                format: "CODE128",
+                width: 3,
+                height: 100,
+                displayValue: true,
+                fontSize: 16,
+                margin: 0,
+                background: "#ffffff"
+            });
+        } else if (typeof JsBarcode === 'undefined') {
+            setTimeout(initBarcode, 100);
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBarcode);
+    } else {
+        initBarcode();
+    }
+})();
+JS;
+    $this->registerJs($jsBarcodeScript, \yii\web\View::POS_END);
 }
 ?>
