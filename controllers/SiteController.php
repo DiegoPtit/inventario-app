@@ -51,6 +51,19 @@ class SiteController extends Controller
     /**
      * {@inheritdoc}
      */
+    public function beforeAction($action)
+    {
+        // Deshabilitar CSRF para endpoints que reciben peticiones de microservicios
+        if ($action->id === 'update-usdt-rate') {
+            $this->enableCsrfValidation = false;
+        }
+        
+        return parent::beforeAction($action);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function actions()
     {
         return [
@@ -848,6 +861,86 @@ class SiteController extends Controller
         } else {
             Yii::$app->session->setFlash('error', 'Error al crear la cuenta: ' . implode(', ', $user->getFirstErrors()));
             return $this->redirect(['site/login']);
+        }
+    }
+
+    /**
+     * AJAX: Update USDT rate from Binance P2P scraper microservice
+     *
+     * @return Response
+     */
+    public function actionUpdateUsdtRate()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        try {
+            // Obtener datos del POST
+            $precioParalelo = Yii::$app->request->post('precio_paralelo');
+            $observaciones = Yii::$app->request->post('observaciones', 'Actualización automática desde Binance P2P');
+            $source = Yii::$app->request->post('source', 'unknown');
+            $metadata = Yii::$app->request->post('metadata', []);
+
+            // Log de la petición
+            Yii::info("Actualización USDT desde microservicio: {$source}", __METHOD__);
+
+            // Validar que se haya enviado el precio
+            if (!$precioParalelo || !is_numeric($precioParalelo)) {
+                throw new \Exception('El precio debe ser un número válido');
+            }
+
+            $nuevoPrecio = floatval($precioParalelo);
+
+            // Validar que el precio sea mayor a 0
+            if ($nuevoPrecio <= 0) {
+                throw new \Exception('El precio debe ser mayor a 0');
+            }
+
+            // No validar rango específico - el mercado venezolano es altamente volátil
+
+            // Verificar si el precio ha cambiado significativamente (más de 0.01 VES)
+            $ultimoPrecio = HistoricoPreciosDolar::find()
+                ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+
+            $precioCambio = !$ultimoPrecio || abs($ultimoPrecio->precio_ves - $nuevoPrecio) > 0.01;
+
+            // Guardar el nuevo precio SIEMPRE (para mantener histórico)
+            $historicoPrecio = new HistoricoPreciosDolar();
+            $historicoPrecio->precio_ves = $nuevoPrecio;
+            $historicoPrecio->setTipoToParalelo();
+            // created_at se establece automáticamente por TimestampBehavior
+
+            if (!$historicoPrecio->save()) {
+                throw new \Exception('Error al guardar el nuevo precio paralelo: ' . implode(', ', $historicoPrecio->getFirstErrors()));
+            }
+
+            // Log detallado
+            $metadataStr = !empty($metadata) ? json_encode($metadata) : 'N/A';
+            Yii::info("Precio USDT actualizado: {$nuevoPrecio} VES | Fuente: {$source} | Metadata: {$metadataStr}", __METHOD__);
+
+            return [
+                'success' => true,
+                'message' => 'Precio USDT/VES actualizado correctamente desde Binance P2P',
+                'data' => [
+                    'precio' => number_format($nuevoPrecio, 2, ',', '.'),
+                    'precio_anterior' => $ultimoPrecio ? number_format($ultimoPrecio->precio_ves, 2, ',', '.') : 'N/A',
+                    'variacion' => $ultimoPrecio ? number_format($nuevoPrecio - $ultimoPrecio->precio_ves, 2, ',', '.') : 'N/A',
+                    'fecha' => date('Y-m-d H:i:s'),
+                    'actualizado' => true,
+                    'metodo' => 'Binance P2P (Automático)',
+                    'observaciones' => $observaciones,
+                    'metadata' => $metadata
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            Yii::error('Error al actualizar precio USDT desde microservicio: ' . $e->getMessage(), __METHOD__);
+            
+            return [
+                'success' => false,
+                'message' => 'Error al actualizar el precio USDT: ' . $e->getMessage()
+            ];
         }
     }
 }
