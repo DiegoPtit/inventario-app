@@ -798,6 +798,154 @@ class ProductosController extends Controller
     }
 
     /**
+     * Lista productos sin código de barras para etiquetar
+     * @return string
+     */
+    public function actionProductosEtiquetar()
+    {
+        // Desactivar layout (vista para impresión)
+        $this->layout = false;
+        
+        // Encontrar el código de barras más largo y mayor numéricamente
+        $maxBarcode = Productos::find()
+            ->select('codigo_barra')
+            ->where(['IS NOT', 'codigo_barra', null])
+            ->andWhere(['<>', 'codigo_barra', ''])
+            ->orderBy(['LENGTH(codigo_barra)' => SORT_DESC])
+            ->limit(1)
+            ->scalar();
+        
+        // Determinar el patrón base para generar códigos
+        $barcodeLength = $maxBarcode ? strlen($maxBarcode) : 13; // EAN-13 por defecto
+        $nextBarcodeNumber = $maxBarcode ? intval($maxBarcode) + 1 : 1000000000000;
+        
+        // Obtener todos los productos sin código de barras
+        $productosSinCodigo = Productos::find()
+            ->where(['OR',
+                ['codigo_barra' => null],
+                ['codigo_barra' => '']
+            ])
+            ->with('stocks')
+            ->orderBy(['id' => SORT_ASC])
+            ->all();
+        
+        // Verificar si hay productos sin código
+        $hayProductosSinCodigo = !empty($productosSinCodigo);
+        
+        // Preparar lista de productos con códigos generados o existentes
+        $productosParaEtiquetar = [];
+        $codigosGeneradosMap = []; // Para guardar en BD luego
+        
+        if ($hayProductosSinCodigo) {
+            // HAY PRODUCTOS SIN CÓDIGO - Generar códigos y repetir según stock
+            foreach ($productosSinCodigo as $producto) {
+                // Calcular stock total del producto
+                $stockTotal = 0;
+                foreach ($producto->stocks as $stock) {
+                    $stockTotal += $stock->cantidad;
+                }
+                
+                // Generar UN SOLO código para este producto (compartido por todas las unidades)
+                $codigoGenerado = str_pad($nextBarcodeNumber, $barcodeLength, '0', STR_PAD_LEFT);
+                
+                // Guardar para luego insertar en BD
+                $codigosGeneradosMap[$producto->id] = $codigoGenerado;
+                
+                // Repetir el producto según su stock (pero con el MISMO código)
+                for ($i = 0; $i < $stockTotal; $i++) {
+                    $productosParaEtiquetar[] = [
+                        'producto' => $producto,
+                        'codigo_barra_generado' => $codigoGenerado,
+                        'stock_total' => $stockTotal,
+                    ];
+                }
+                
+                // Incrementar solo cuando cambiamos de producto
+                $nextBarcodeNumber++;
+            }
+        } else {
+            // TODOS LOS PRODUCTOS TIENEN CÓDIGO - Mostrar códigos existentes sin repetir
+            $todosLosProductos = Productos::find()
+                ->where(['IS NOT', 'codigo_barra', null])
+                ->andWhere(['<>', 'codigo_barra', ''])
+                ->with('stocks')
+                ->orderBy(['codigo_barra' => SORT_ASC])
+                ->all();
+            
+            foreach ($todosLosProductos as $producto) {
+                // Calcular stock total
+                $stockTotal = 0;
+                foreach ($producto->stocks as $stock) {
+                    $stockTotal += $stock->cantidad;
+                }
+                
+                // Agregar UNA SOLA VEZ (sin repetir)
+                $productosParaEtiquetar[] = [
+                    'producto' => $producto,
+                    'codigo_barra_generado' => $producto->codigo_barra,
+                    'stock_total' => $stockTotal,
+                ];
+            }
+        }
+        
+        return $this->render('productos-etiquetar', [
+            'productosParaEtiquetar' => $productosParaEtiquetar,
+            'barcodeLength' => $barcodeLength,
+            'hayProductosSinCodigo' => $hayProductosSinCodigo,
+            'codigosGeneradosMap' => $codigosGeneradosMap,
+        ]);
+    }
+    
+    /**
+     * Guarda los códigos de barras generados en la base de datos
+     * @return \yii\web\Response
+     */
+    public function actionGuardarCodigosBarras()
+    {
+        $codigosJson = Yii::$app->request->post('codigos');
+        
+        if (!$codigosJson) {
+            Yii::$app->session->setFlash('error', 'No se recibieron códigos para guardar.');
+            return $this->redirect(['productos-etiquetar']);
+        }
+        
+        $codigos = json_decode($codigosJson, true);
+        
+        if (!is_array($codigos) || empty($codigos)) {
+            Yii::$app->session->setFlash('error', 'Formato de códigos inválido.');
+            return $this->redirect(['productos-etiquetar']);
+        }
+        
+        $transaction = Yii::$app->db->beginTransaction();
+        
+        try {
+            $actualizados = 0;
+            
+            foreach ($codigos as $idProducto => $codigoBarra) {
+                $producto = Productos::findOne($idProducto);
+                
+                if ($producto && (empty($producto->codigo_barra) || $producto->codigo_barra === null)) {
+                    $producto->codigo_barra = $codigoBarra;
+                    
+                    if ($producto->save(false)) {
+                        $actualizados++;
+                    }
+                }
+            }
+            
+            $transaction->commit();
+            
+            Yii::$app->session->setFlash('success', "Se guardaron exitosamente $actualizados códigos de barras en la base de datos.");
+            
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            Yii::$app->session->setFlash('error', 'Error al guardar los códigos: ' . $e->getMessage());
+        }
+        
+        return $this->redirect(['productos-etiquetar']);
+    }
+
+    /**
 
      * Finds the Productos model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.

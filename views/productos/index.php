@@ -438,6 +438,12 @@ $this->registerCss('
                     <i class="bi bi-file-earmark-text"></i> Generar Reporte
                 </button>
             </div>
+            <div class="text-start mt-2">
+                <?= Html::a('<i class="bi bi-tags"></i> Ver productos a etiquetar', ['productos-etiquetar'], [
+                    'class' => 'btn btn-outline-warning btn-sm fw-bold w-100',
+                    'style' => 'background-color: #fff8f0; border-color: #ffdab3; color: #8b4513; border-radius: 2rem; padding-left: 1.5rem; padding-right: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04);'
+                ]) ?>
+            </div>
         </div>
 
         <!-- Barra de búsqueda moderna -->
