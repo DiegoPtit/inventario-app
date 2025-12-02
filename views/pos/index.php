@@ -1935,20 +1935,35 @@ $this->registerJs("
             audioContextPOS = new (window.AudioContext || window.webkitAudioContext)();
         }
         
-        const oscillator = audioContextPOS.createOscillator();
+        const oscillator1 = audioContextPOS.createOscillator();
+        const oscillator2 = audioContextPOS.createOscillator();
+        const oscillator3 = audioContextPOS.createOscillator();
         const gainNode = audioContextPOS.createGain();
         
-        oscillator.connect(gainNode);
+        oscillator1.connect(gainNode);
+        oscillator2.connect(gainNode);
+        oscillator3.connect(gainNode);
         gainNode.connect(audioContextPOS.destination);
         
-        oscillator.frequency.value = 1780; // A4
-        oscillator.type = 'sine';
+        oscillator1.frequency.value = 1780; // Frecuencia original
+        oscillator1.type = 'square';
         
-        gainNode.gain.setValueAtTime(0.3, audioContextPOS.currentTime);
+        oscillator2.frequency.value = 440; // Nueva frecuencia
+        oscillator2.type = 'square';
+        
+        oscillator3.frequency.value = 650; // Nueva frecuencia (E)
+        oscillator3.type = 'square';
+        
+        gainNode.gain.setValueAtTime(0.42, audioContextPOS.currentTime); // 0.3 * 1.4 = 0.42 (40% más de ganancia)
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextPOS.currentTime + 0.1);
         
-        oscillator.start(audioContextPOS.currentTime);
-        oscillator.stop(audioContextPOS.currentTime + 0.2);
+        oscillator1.start(audioContextPOS.currentTime+0.1);
+        oscillator2.start(audioContextPOS.currentTime);
+        oscillator3.start(audioContextPOS.currentTime+0.1);
+        
+        oscillator1.stop(audioContextPOS.currentTime + 0.23);
+        oscillator2.stop(audioContextPOS.currentTime + 0.23);
+        oscillator3.stop(audioContextPOS.currentTime + 0.23);
     }
 ", \yii\web\View::POS_END);
 ?>
