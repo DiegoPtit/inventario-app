@@ -221,5 +221,15 @@ $this->registerCss('
         ', Url::to(['proveedores/index']), [
             'class' => 'menu-card menu-card-proveedores'
         ]) ?>
+
+        <!-- Tarjeta Monitor Dólar -->
+        <?= Html::a('
+            <div class="menu-card-icon">
+                <i class="bi bi-currency-exchange"></i>
+            </div>
+            <h3 class="menu-card-title">Monitor Dólar</h3>
+        ', Url::to(['dollar-statics/index']), [
+            'class' => 'menu-card menu-card-dollar-statics'
+        ]) ?>
     </div>
 </div>

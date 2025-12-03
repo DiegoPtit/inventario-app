@@ -157,8 +157,9 @@ $preciosJson = Json::encode($precios);
                 this.fadeTimer = setInterval(() => this.rotate(), 8000);
             }
             
-            // Actualizar precios desde el servidor cada 15 segundos
-            this.updateTimer = setInterval(() => this.fetchPrices(), 15000);
+            // Actualizar precios desde el servidor cada 15 minutos,
+            // incluso si no hay variación en el valor
+            this.updateTimer = setInterval(() => this.fetchPrices(), 15 * 60 * 1000);
             
             // Limpiar timers al salir
             window.addEventListener('beforeunload', () => this.cleanup());

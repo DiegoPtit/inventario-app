@@ -288,6 +288,55 @@ $this->registerCss('
     }
 }
 
+/* Ajustes generales para móviles (pantallas pequeñas) */
+@media (max-width: 576px) {
+    .dollar-statics-container {
+        padding: 12px 8px;
+    }
+
+    .back-button {
+        margin-bottom: 20px;
+    }
+
+    .rate-card-body {
+        padding: 24px 14px;
+    }
+
+    .rate-price {
+        font-size: 2.2rem;
+        min-height: 60px;
+    }
+
+    .chart-container {
+        padding: 16px 12px;
+    }
+
+    .chart-title {
+        font-size: 1.05rem;
+    }
+
+    .chart-canvas-wrapper {
+        height: 260px;
+    }
+
+    .filter-btn {
+        font-size: 0.78rem;
+        padding: 5px 8px;
+    }
+
+    .differential-container {
+        padding: 18px 14px;
+    }
+
+    .differential-value {
+        font-size: 1.6rem;
+    }
+
+    .differential-value small {
+        font-size: 0.9rem;
+    }
+}
+
 /* Differential section */
 .differential-section {
     max-width: 1200px;
@@ -296,19 +345,20 @@ $this->registerCss('
 }
 
 .differential-container {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: 30px;
-    color: white;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e3e6ea;
+    padding: 24px 20px;
+    color: #212529;
 }
 
 .differential-title {
-    font-size: 1.4rem;
+    font-size: 1.25rem;
     font-weight: 700;
     text-align: center;
-    margin-bottom: 25px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+    color: #343a40;
 }
 
 .differential-grid {
@@ -324,31 +374,31 @@ $this->registerCss('
 }
 
 .differential-item {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
+    background: #f8f9fa;
     border-radius: 10px;
-    padding: 20px;
+    padding: 18px 16px;
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #e3e6ea;
 }
 
 .differential-label {
     font-size: 0.85rem;
-    opacity: 0.9;
+    opacity: 0.8;
     margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    color: #6c757d;
 }
 
 .differential-value {
     font-size: 2rem;
     font-weight: 700;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: #212529;
 }
 
 .differential-value small {
     font-size: 1rem;
-    opacity: 0.8;
+    opacity: 0.7;
     margin-left: 5px;
 }
 ');
@@ -543,14 +593,24 @@ function updateRates() {
                         previousPrices[rateType] = rate.precio;
                     }
                     
-                    if (metaContainer && rate.timestamp) {
-                        // Usar el timestamp del servidor y convertir a hora local del navegador
-                        const serverDate = new Date(rate.timestamp * 1000); // Convertir timestamp a Date
-                        const timeStr = serverDate.toLocaleTimeString('es-VE', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                        });
-                        metaContainer.textContent = 'Última actualización: ' + timeStr;
+                    if (metaContainer) {
+                        // Mostrar la fecha/hora exactamente como viene desde el backend/BD
+                        // Prioridad: campo de fecha explícito, luego timestamp (como respaldo)
+                        let fechaTexto = '--';
+
+                        if (rate.fecha_db) {
+                            // Si el backend envía el valor tal cual de la BD
+                            fechaTexto = rate.fecha_db;
+                        } else if (rate.fecha) {
+                            // O cualquier otro campo de fecha ya formateado por el backend
+                            fechaTexto = rate.fecha;
+                        } else if (rate.timestamp) {
+                            // Respaldo: si solo llega timestamp, se convierte a string legible
+                            const serverDate = new Date(rate.timestamp * 1000);
+                            fechaTexto = serverDate.toISOString().replace('T', ' ').substring(0, 19);
+                        }
+
+                        metaContainer.textContent = 'Última actualización: ' + fechaTexto;
                     }
                     
                     // Actualizar footer con comparación del día anterior si existe

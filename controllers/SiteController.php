@@ -431,14 +431,17 @@ class SiteController extends Controller
             if ($precioOficial) {
                 // Crear DateTime con zona horaria de Venezuela para timestamp correcto
                 $dateTimeOficial = new \DateTime($precioOficial->created_at, new \DateTimeZone('America/Caracas'));
-                
+
                 $precioOficialData = [
                     'precio' => number_format($precioOficial->precio_ves, 2, ',', '.'),
                     'precio_raw' => floatval($precioOficial->precio_ves),
                     'tipo' => $precioOficial->displayTipo(),
                     'class' => 'oficial',
                     'icon' => 'bank',
-                    'timestamp' => $dateTimeOficial->getTimestamp() // Timestamp Unix correcto
+                    // Fecha/hora tal como está almacenada en la BD (sin cambios de zona horaria)
+                    'fecha_db' => $precioOficial->created_at,
+                    // Timestamp Unix (se mantiene por compatibilidad con otros componentes)
+                    'timestamp' => $dateTimeOficial->getTimestamp()
                 ];
                 
                 // Agregar información de comparación con ayer si existe
@@ -462,14 +465,17 @@ class SiteController extends Controller
             if ($precioParalelo) {
                 // Crear DateTime con zona horaria de Venezuela para timestamp correcto
                 $dateTimeParalelo = new \DateTime($precioParalelo->created_at, new \DateTimeZone('America/Caracas'));
-                
+
                 $precioParaleloData = [
                     'precio' => number_format($precioParalelo->precio_ves, 2, ',', '.'),
                     'precio_raw' => floatval($precioParalelo->precio_ves),
                     'tipo' => $precioParalelo->displayTipo(),
                     'class' => 'paralelo',
                     'icon' => 'currency-exchange',
-                    'timestamp' => $dateTimeParalelo->getTimestamp() // Timestamp Unix correcto
+                    // Fecha/hora tal como está almacenada en la BD (sin cambios de zona horaria)
+                    'fecha_db' => $precioParalelo->created_at,
+                    // Timestamp Unix (se mantiene por compatibilidad con otros componentes)
+                    'timestamp' => $dateTimeParalelo->getTimestamp()
                 ];
                 
                 // Agregar información de comparación con ayer si existe

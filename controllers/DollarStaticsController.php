@@ -56,12 +56,13 @@ class DollarStaticsController extends Controller
 
         try {
             $period = Yii::$app->request->get('period', '1d');
-            
+
             Yii::info("Historical data requested for period: {$period}", __METHOD__);
-            
+
             // Determinar el rango de fechas según el período
-            $dateFrom = $this->getDateFromPeriod($period);
-            $now = new \DateTime();
+            // Ajuste horario: trabajamos siempre 4 horas "atrás" para hablar el mismo idioma que la BD
+            $now = $this->getShiftedNow();
+            $dateFrom = $this->getDateFromPeriod($period, clone $now);
             
             Yii::info("Date from: {$dateFrom}, Date to: " . $now->format('Y-m-d H:i:s'), __METHOD__);
             
@@ -303,12 +304,23 @@ class DollarStaticsController extends Controller
     }
     
     /**
-     * Get date from based on period
+     * Obtener el "ahora" ajustado 4 horas hacia atrás para que coincida con los registros de BD
+     *
+     * @return \DateTime
      */
-    private function getDateFromPeriod($period)
+    private function getShiftedNow()
     {
         $now = new \DateTime();
-        
+        // Posicionar 4 horas atrás respecto al servidor para que los rangos coincidan con la hora de la BD
+        $now->modify('-4 hours');
+        return $now;
+    }
+    
+    /**
+     * Get date from based on period, using a base "now" (ya ajustado)
+     */
+    private function getDateFromPeriod($period, \DateTime $now)
+    {
         switch ($period) {
             case '15min':
                 $now->modify('-15 minutes');
@@ -343,7 +355,6 @@ class DollarStaticsController extends Controller
             default:
                 $now->modify('-1 day');
         }
-        
         return $now->format('Y-m-d H:i:s');
     }
     

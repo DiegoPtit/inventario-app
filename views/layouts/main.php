@@ -134,6 +134,12 @@ $this->registerJsFile('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dis
                     <i class="bi bi-truck fs-5" style="color: #17a2b8; width: 24px;"></i>
                     <span class="sidebar-nav-text" style="color: #495057; font-weight: 500;">Proveedores</span>
                 </a>
+
+                <!-- Precios del dólar -->
+                <a href="<?= Yii::$app->urlManager->createUrl(['dollar-statics/index']) ?>" class="sidebar-nav-item d-flex align-items-center gap-3 text-decoration-none px-3 py-3 rounded mb-2" data-color="#17a2b8">
+                    <i class="bi bi-currency-exchange fs-5" style="color: #17a2b8; width: 24px;"></i>
+                    <span class="sidebar-nav-text" style="color: #495057; font-weight: 500;">Monitor Dólar</span>
+                </a>
             </nav>
         <?php endif; ?>
     </div>
