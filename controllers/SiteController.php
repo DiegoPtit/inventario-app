@@ -57,6 +57,10 @@ class SiteController extends Controller
         if ($action->id === 'update-usdt-rate') {
             $this->enableCsrfValidation = false;
         }
+
+        if ($action->id === 'update-bcv') {
+            $this->enableCsrfValidation = false;
+        }
         
         return parent::beforeAction($action);
     }
@@ -1080,6 +1084,146 @@ class SiteController extends Controller
             $errorResponse = [
                 'success' => false,
                 'message' => 'Error al actualizar el precio USDT: ' . $e->getMessage(),
+                'request_id' => $requestId,
+            ];
+            
+            Yii::info("[{$requestId}] Respuesta de error enviada", __METHOD__);
+            
+            return $errorResponse;
+        }
+    }
+
+    /**
+     * AJAX: Update BCV official dollar rate from bdv-microservice
+     * 
+     * @return Response
+     */
+    public function actionUpdateBcv()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // Log inicial: API llamada
+        $requestId = uniqid('bcv_', true);
+        $requestTime = microtime(true);
+        $clientIp = Yii::$app->request->userIP;
+        
+        Yii::info("[{$requestId}] API actionUpdateBcv llamada desde IP: {$clientIp}", __METHOD__);
+
+        try {
+            // Obtener datos del POST (JSON)
+            $rawBody = Yii::$app->request->getRawBody();
+            $data = json_decode($rawBody, true);
+            
+            // También intentar obtener desde POST tradicional si el JSON falla
+            if (!$data) {
+                $data = Yii::$app->request->post();
+            }
+            
+            $valorPonderacion = $data['valorponderacion'] ?? null;
+
+            // Log de datos recibidos
+            Yii::info("[{$requestId}] Datos recibidos: " . json_encode($data, JSON_UNESCAPED_UNICODE), __METHOD__);
+
+            // Validar que se haya enviado el valor de ponderación
+            if (!$valorPonderacion) {
+                Yii::warning("[{$requestId}] Validación fallida: valorponderacion no enviado", __METHOD__);
+                throw new \Exception('El campo valorponderacion es requerido');
+            }
+
+            // Convertir formato: "XXX,XXXXXXXX" -> "XXX.XXXXXXXX"
+            // Reemplazar coma decimal por punto decimal
+            $valorPonderacionNormalizado = str_replace(',', '.', $valorPonderacion);
+            
+            Yii::info("[{$requestId}] Valor original: {$valorPonderacion} | Valor normalizado: {$valorPonderacionNormalizado}", __METHOD__);
+
+            // Validar que sea un número válido después de la conversión
+            if (!is_numeric($valorPonderacionNormalizado)) {
+                Yii::warning("[{$requestId}] Validación fallida: valorponderacion inválido después de normalización (valor: {$valorPonderacionNormalizado})", __METHOD__);
+                throw new \Exception('El valor de ponderación debe ser un número válido');
+            }
+
+            $nuevoPrecio = floatval($valorPonderacionNormalizado);
+            Yii::info("[{$requestId}] Precio parseado correctamente: {$nuevoPrecio} VES", __METHOD__);
+
+            // Validar que el precio sea mayor a 0
+            if ($nuevoPrecio <= 0) {
+                Yii::warning("[{$requestId}] Validación fallida: precio <= 0 (valor: {$nuevoPrecio})", __METHOD__);
+                throw new \Exception('El precio debe ser mayor a 0');
+            }
+
+            Yii::info("[{$requestId}] Validaciones de precio completadas exitosamente", __METHOD__);
+
+            // Consultar último precio registrado
+            Yii::info("[{$requestId}] Consultando último precio oficial registrado...", __METHOD__);
+            
+            $ultimoPrecio = HistoricoPreciosDolar::find()
+                ->where(['tipo' => HistoricoPreciosDolar::TIPO_OFICIAL])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+
+            if ($ultimoPrecio) {
+                $diferencia = $nuevoPrecio - $ultimoPrecio->precio_ves;
+                $porcentajeCambio = ($diferencia / $ultimoPrecio->precio_ves) * 100;
+                Yii::info("[{$requestId}] Último precio encontrado: {$ultimoPrecio->precio_ves} VES (ID: {$ultimoPrecio->id}, Fecha: {$ultimoPrecio->created_at})", __METHOD__);
+                Yii::info("[{$requestId}] Diferencia: {$diferencia} VES ({$porcentajeCambio}%)", __METHOD__);
+            } else {
+                Yii::info("[{$requestId}] No se encontró precio anterior - Este será el primer registro", __METHOD__);
+            }
+
+            // Guardar el nuevo precio en el histórico
+            Yii::info("[{$requestId}] Creando nuevo registro en HistoricoPreciosDolar...", __METHOD__);
+            
+            $historicoPrecio = new HistoricoPreciosDolar();
+            $historicoPrecio->precio_ves = $nuevoPrecio;
+            $historicoPrecio->setTipoToOficial();
+            // created_at se establece automáticamente por TimestampBehavior
+
+            if (!$historicoPrecio->save()) {
+                $errors = $historicoPrecio->getFirstErrors();
+                Yii::error("[{$requestId}] Error al guardar HistoricoPreciosDolar: " . json_encode($errors, JSON_UNESCAPED_UNICODE), __METHOD__);
+                throw new \Exception('Error al guardar el nuevo precio oficial: ' . implode(', ', $errors));
+            }
+
+            // Log detallado de éxito
+            $executionTime = round((microtime(true) - $requestTime) * 1000, 2);
+            
+            Yii::info("[{$requestId}] ✓ Registro creado exitosamente - ID: {$historicoPrecio->id}", __METHOD__);
+            Yii::info("[{$requestId}] Precio BCV actualizado: {$nuevoPrecio} VES | Fuente: bdv-microservice", __METHOD__);
+            Yii::info("[{$requestId}] Proceso completado en {$executionTime}ms", __METHOD__);
+
+            $response = [
+                'success' => true,
+                'message' => 'Precio oficial BCV actualizado correctamente',
+                'data' => [
+                    'precio' => number_format($nuevoPrecio, 2, ',', '.'),
+                    'precio_anterior' => $ultimoPrecio ? number_format($ultimoPrecio->precio_ves, 2, ',', '.') : 'N/A',
+                    'variacion' => $ultimoPrecio ? number_format($nuevoPrecio - $ultimoPrecio->precio_ves, 2, ',', '.') : 'N/A',
+                    'fecha' => date('Y-m-d H:i:s'),
+                    'actualizado' => true,
+                    'metodo' => 'BCV Microservice (Automático)',
+                    'registro_id' => $historicoPrecio->id,
+                ]
+            ];
+
+            Yii::info("[{$requestId}] Respuesta enviada: " . json_encode($response, JSON_UNESCAPED_UNICODE), __METHOD__);
+            
+            return $response;
+
+        } catch (\Exception $e) {
+            $executionTime = round((microtime(true) - $requestTime) * 1000, 2);
+            $errorDetails = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ];
+            
+            Yii::error("[{$requestId}] ✗ Error al actualizar precio BCV - Tiempo: {$executionTime}ms", __METHOD__);
+            Yii::error("[{$requestId}] Detalles del error: " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE), __METHOD__);
+            
+            $errorResponse = [
+                'success' => false,
+                'message' => 'Error al actualizar el precio BCV: ' . $e->getMessage(),
                 'request_id' => $requestId,
             ];
             
