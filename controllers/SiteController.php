@@ -873,6 +873,13 @@ class SiteController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
+        // Log inicial: API llamada
+        $requestId = uniqid('usdt_', true);
+        $requestTime = microtime(true);
+        $clientIp = Yii::$app->request->userIP;
+        
+        Yii::info("[{$requestId}] API actionUpdateUsdtRate llamada desde IP: {$clientIp}", __METHOD__);
+
         try {
             // Obtener datos del POST
             $precioParalelo = Yii::$app->request->post('precio_paralelo');
@@ -880,46 +887,82 @@ class SiteController extends Controller
             $source = Yii::$app->request->post('source', 'unknown');
             $metadata = Yii::$app->request->post('metadata', []);
 
-            // Log de la petición
-            Yii::info("Actualización USDT desde microservicio: {$source}", __METHOD__);
+            // Log de datos recibidos
+            $receivedData = [
+                'precio_paralelo' => $precioParalelo,
+                'observaciones' => $observaciones,
+                'source' => $source,
+                'metadata' => $metadata,
+            ];
+            Yii::info("[{$requestId}] Datos recibidos: " . json_encode($receivedData, JSON_UNESCAPED_UNICODE), __METHOD__);
 
             // Validar que se haya enviado el precio
             if (!$precioParalelo || !is_numeric($precioParalelo)) {
+                Yii::warning("[{$requestId}] Validación fallida: precio_paralelo inválido (valor: " . var_export($precioParalelo, true) . ")", __METHOD__);
                 throw new \Exception('El precio debe ser un número válido');
             }
 
             $nuevoPrecio = floatval($precioParalelo);
+            Yii::info("[{$requestId}] Precio parseado correctamente: {$nuevoPrecio} VES", __METHOD__);
 
             // Validar que el precio sea mayor a 0
             if ($nuevoPrecio <= 0) {
+                Yii::warning("[{$requestId}] Validación fallida: precio <= 0 (valor: {$nuevoPrecio})", __METHOD__);
                 throw new \Exception('El precio debe ser mayor a 0');
             }
+
+            Yii::info("[{$requestId}] Validaciones de precio completadas exitosamente", __METHOD__);
 
             // No validar rango específico - el mercado venezolano es altamente volátil
 
             // Verificar si el precio ha cambiado significativamente (más de 0.01 VES)
+            Yii::info("[{$requestId}] Consultando último precio registrado...", __METHOD__);
+            
             $ultimoPrecio = HistoricoPreciosDolar::find()
                 ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
                 ->orderBy(['created_at' => SORT_DESC])
                 ->one();
 
+            if ($ultimoPrecio) {
+                $diferencia = $nuevoPrecio - $ultimoPrecio->precio_ves;
+                $porcentajeCambio = ($diferencia / $ultimoPrecio->precio_ves) * 100;
+                Yii::info("[{$requestId}] Último precio encontrado: {$ultimoPrecio->precio_ves} VES (ID: {$ultimoPrecio->id}, Fecha: {$ultimoPrecio->created_at})", __METHOD__);
+                Yii::info("[{$requestId}] Diferencia: {$diferencia} VES ({$porcentajeCambio}%)", __METHOD__);
+            } else {
+                Yii::info("[{$requestId}] No se encontró precio anterior - Este será el primer registro", __METHOD__);
+            }
+
             $precioCambio = !$ultimoPrecio || abs($ultimoPrecio->precio_ves - $nuevoPrecio) > 0.01;
+            
+            if ($precioCambio) {
+                Yii::info("[{$requestId}] Cambio significativo detectado (>0.01 VES)", __METHOD__);
+            } else {
+                Yii::info("[{$requestId}] Cambio no significativo (<0.01 VES) - Se guardará en histórico de todos modos", __METHOD__);
+            }
 
             // Guardar el nuevo precio SIEMPRE (para mantener histórico)
+            Yii::info("[{$requestId}] Creando nuevo registro en HistoricoPreciosDolar...", __METHOD__);
+            
             $historicoPrecio = new HistoricoPreciosDolar();
             $historicoPrecio->precio_ves = $nuevoPrecio;
             $historicoPrecio->setTipoToParalelo();
             // created_at se establece automáticamente por TimestampBehavior
 
             if (!$historicoPrecio->save()) {
-                throw new \Exception('Error al guardar el nuevo precio paralelo: ' . implode(', ', $historicoPrecio->getFirstErrors()));
+                $errors = $historicoPrecio->getFirstErrors();
+                Yii::error("[{$requestId}] Error al guardar HistoricoPreciosDolar: " . json_encode($errors, JSON_UNESCAPED_UNICODE), __METHOD__);
+                throw new \Exception('Error al guardar el nuevo precio paralelo: ' . implode(', ', $errors));
             }
 
-            // Log detallado
-            $metadataStr = !empty($metadata) ? json_encode($metadata) : 'N/A';
-            Yii::info("Precio USDT actualizado: {$nuevoPrecio} VES | Fuente: {$source} | Metadata: {$metadataStr}", __METHOD__);
+            // Log detallado de éxito
+            $metadataStr = !empty($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : 'N/A';
+            $executionTime = round((microtime(true) - $requestTime) * 1000, 2);
+            
+            Yii::info("[{$requestId}] ✓ Registro creado exitosamente - ID: {$historicoPrecio->id}", __METHOD__);
+            Yii::info("[{$requestId}] Precio USDT actualizado: {$nuevoPrecio} VES | Fuente: {$source} | Metadata: {$metadataStr}", __METHOD__);
+            Yii::info("[{$requestId}] Proceso completado en {$executionTime}ms", __METHOD__);
 
-            return [
+            $response = [
                 'success' => true,
                 'message' => 'Precio USDT/VES actualizado correctamente desde Binance P2P',
                 'data' => [
@@ -930,17 +973,36 @@ class SiteController extends Controller
                     'actualizado' => true,
                     'metodo' => 'Binance P2P (Automático)',
                     'observaciones' => $observaciones,
-                    'metadata' => $metadata
+                    'metadata' => $metadata,
+                    'registro_id' => $historicoPrecio->id,
                 ]
             ];
 
-        } catch (\Exception $e) {
-            Yii::error('Error al actualizar precio USDT desde microservicio: ' . $e->getMessage(), __METHOD__);
+            Yii::info("[{$requestId}] Respuesta enviada: " . json_encode($response, JSON_UNESCAPED_UNICODE), __METHOD__);
             
-            return [
-                'success' => false,
-                'message' => 'Error al actualizar el precio USDT: ' . $e->getMessage()
+            return $response;
+
+        } catch (\Exception $e) {
+            $executionTime = round((microtime(true) - $requestTime) * 1000, 2);
+            $errorDetails = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ];
+            
+            Yii::error("[{$requestId}] ✗ Error al actualizar precio USDT - Tiempo: {$executionTime}ms", __METHOD__);
+            Yii::error("[{$requestId}] Detalles del error: " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE), __METHOD__);
+            
+            $errorResponse = [
+                'success' => false,
+                'message' => 'Error al actualizar el precio USDT: ' . $e->getMessage(),
+                'request_id' => $requestId,
+            ];
+            
+            Yii::info("[{$requestId}] Respuesta de error enviada", __METHOD__);
+            
+            return $errorResponse;
         }
     }
 }
