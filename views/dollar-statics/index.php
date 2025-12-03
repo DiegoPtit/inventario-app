@@ -582,19 +582,7 @@ $this->registerCss('
         <div class="chart-section">
             <div class="chart-container">
                 <div class="chart-header">
-                    <h3 class="chart-title">Histórico de Tasas</h3>
-                    <div class="chart-filters">
-                        <button class="filter-btn" data-period="15min">15 min</button>
-                        <button class="filter-btn" data-period="30min">30 min</button>
-                        <button class="filter-btn" data-period="1h">1 hora</button>
-                        <button class="filter-btn" data-period="5h">5 horas</button>
-                        <button class="filter-btn active" data-period="1d">1 día</button>
-                        <button class="filter-btn" data-period="5d">5 días</button>
-                        <button class="filter-btn" data-period="10d">10 días</button>
-                        <button class="filter-btn" data-period="15d">15 días</button>
-                        <button class="filter-btn" data-period="1m">1 mes</button>
-                        <button class="filter-btn" data-period="1y">1 año</button>
-                    </div>
+                    <h3 class="chart-title">Histórico de Tasas (Todos los Datos)</h3>
                 </div>
                 <div class="chart-canvas-wrapper">
                     <canvas id="ratesChart"></canvas>
@@ -671,7 +659,6 @@ function recalcFromForeign() {
 
 // Chart instance
 let ratesChart = null;
-let currentPeriod = '1d';
 
 // Función para crear la estructura de dígitos con animación
 function createDigitStructure(price) {
@@ -820,14 +807,13 @@ function updateRates() {
 }
 
 // Función para cargar datos históricos y actualizar el gráfico
-function loadHistoricalData(period) {
-    const url = '$historicalDataUrl&period=' + period;
-    console.log('Fetching historical data from:', url);
+function loadHistoricalData() {
+    const url = '$historicalDataUrl';
+    console.log('Fetching all historical data from:', url);
     
     fetch(url)
         .then(response => {
             console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
             return response.text();
         })
         .then(text => {
@@ -965,23 +951,7 @@ function updateChart(data) {
     });
 }
 
-// Event listeners para los botones de filtro
-document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        // Remover clase active de todos los botones
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        
-        // Agregar clase active al botón clickeado
-        this.classList.add('active');
-        
-        // Obtener el período
-        const period = this.getAttribute('data-period');
-        currentPeriod = period;
-        
-        // Cargar datos históricos para ese período
-        loadHistoricalData(period);
-    });
-});
+
 
 // Eventos de la calculadora
 if (calcVesInput && calcForeignInput) {
@@ -1034,14 +1004,14 @@ if (calcClearBtn && calcVesInput && calcForeignInput) {
 
 // Actualizar inmediatamente al cargar la página
 updateRates();
-loadHistoricalData(currentPeriod);
+loadHistoricalData();
 
 // Actualizar cada 30 segundos
 setInterval(updateRates, 30000);
 
 // Recargar gráfico cada 2 minutos
 setInterval(() => {
-    loadHistoricalData(currentPeriod);
+    loadHistoricalData();
 }, 120000);
 JS;
 

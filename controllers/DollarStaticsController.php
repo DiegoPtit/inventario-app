@@ -55,53 +55,58 @@ class DollarStaticsController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         try {
-            $period = Yii::$app->request->get('period', '1d');
+            Yii::info("Historical data requested - returning all data", __METHOD__);
 
-            Yii::info("Historical data requested for period: {$period}", __METHOD__);
-
-            // Determinar el rango de fechas según el período
-            // Ajuste horario: trabajamos siempre 4 horas "atrás" para hablar el mismo idioma que la BD
-            $now = $this->getShiftedNow();
-            $dateFrom = $this->getDateFromPeriod($period, clone $now);
-            
-            Yii::info("Date from: {$dateFrom}, Date to: " . $now->format('Y-m-d H:i:s'), __METHOD__);
-            
-            // Obtener TODOS los datos históricos del rango
+            // Obtener TODOS los datos históricos sin filtros
             $oficialData = HistoricoPreciosDolar::find()
                 ->where(['tipo' => HistoricoPreciosDolar::TIPO_OFICIAL])
-                ->andWhere(['>=', 'created_at', $dateFrom])
                 ->orderBy(['created_at' => SORT_ASC])
                 ->all();
             
             $paraleloData = HistoricoPreciosDolar::find()
                 ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
-                ->andWhere(['>=', 'created_at', $dateFrom])
                 ->orderBy(['created_at' => SORT_ASC])
                 ->all();
             
             Yii::info("Oficial data count: " . count($oficialData), __METHOD__);
             Yii::info("Paralelo data count: " . count($paraleloData), __METHOD__);
             
-            // Crear línea de tiempo completa con forward-fill
-            $timelineData = $this->createTimeline($oficialData, $paraleloData, $period, new \DateTime($dateFrom), $now);
+            // Preparar datos para el chart sin agrupación
+            $oficialLabels = [];
+            $oficialValues = [];
+            foreach ($oficialData as $record) {
+                $date = new \DateTime($record->created_at);
+                $oficialLabels[] = $date->format('d/m H:i');
+                $oficialValues[] = floatval($record->precio_ves);
+            }
+            
+            $paraleloLabels = [];
+            $paraleloValues = [];
+            foreach ($paraleloData as $record) {
+                $date = new \DateTime($record->created_at);
+                $paraleloLabels[] = $date->format('d/m H:i');
+                $paraleloValues[] = floatval($record->precio_ves);
+            }
             
             $result = [
                 'success' => true,
                 'data' => [
-                    'oficial' => $timelineData['oficial'],
-                    'paralelo' => $timelineData['paralelo']
+                    'oficial' => [
+                        'labels' => $oficialLabels,
+                        'values' => $oficialValues
+                    ],
+                    'paralelo' => [
+                        'labels' => $paraleloLabels,
+                        'values' => $paraleloValues
+                    ]
                 ],
                 'debug' => [
-                    'period' => $period,
-                    'dateFrom' => $dateFrom,
-                    'dateTo' => $now->format('Y-m-d H:i:s'),
                     'oficialCount' => count($oficialData),
-                    'paraleloCount' => count($paraleloData),
-                    'timelinePoints' => count($timelineData['oficial']['values'])
+                    'paraleloCount' => count($paraleloData)
                 ]
             ];
             
-            Yii::info("Returning timeline data with " . count($timelineData['oficial']['values']) . " points", __METHOD__);
+            Yii::info("Returning all data - Oficial: " . count($oficialData) . ", Paralelo: " . count($paraleloData), __METHOD__);
             
             return $result;
             

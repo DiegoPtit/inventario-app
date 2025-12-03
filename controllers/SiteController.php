@@ -565,22 +565,20 @@ class SiteController extends Controller
 
             $nuevoPrecio = floatval($data['dollar']);
 
-            // Verificar si el precio ha cambiado
+            // Verificar el último precio registrado (para información)
             $ultimoPrecio = HistoricoPreciosDolar::find()
                 ->where(['tipo' => HistoricoPreciosDolar::TIPO_OFICIAL])
                 ->orderBy(['created_at' => SORT_DESC])
                 ->one();
 
-            // Solo guardar si el precio es diferente o no existe registro previo
-            if (!$ultimoPrecio || $ultimoPrecio->precio_ves != $nuevoPrecio) {
-                $historicoPrecio = new HistoricoPreciosDolar();
-                $historicoPrecio->precio_ves = $nuevoPrecio;
-                $historicoPrecio->setTipoToOficial();
-                // created_at will be set automatically by TimestampBehavior
+            // SIEMPRE guardar el precio en el histórico (cada 15 minutos, sin importar si cambió o no)
+            $historicoPrecio = new HistoricoPreciosDolar();
+            $historicoPrecio->precio_ves = $nuevoPrecio;
+            $historicoPrecio->setTipoToOficial();
+            // created_at will be set automatically by TimestampBehavior
 
-                if (!$historicoPrecio->save()) {
-                    throw new \Exception('Error al guardar el nuevo precio: ' . implode(', ', $historicoPrecio->getFirstErrors()));
-                }
+            if (!$historicoPrecio->save()) {
+                throw new \Exception('Error al guardar el nuevo precio: ' . implode(', ', $historicoPrecio->getFirstErrors()));
             }
 
             return [
