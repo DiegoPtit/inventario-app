@@ -401,6 +401,73 @@ $this->registerCss('
     opacity: 0.7;
     margin-left: 5px;
 }
+
+/* Calculator section */
+.calculator-section {
+    max-width: 1200px;
+    margin: 30px auto 0;
+    padding: 0 15px;
+}
+
+.calculator-container {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e3e6ea;
+    padding: 20px 18px;
+}
+
+.calculator-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 18px;
+    color: #343a40;
+}
+
+.calculator-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.6fr 1.2fr;
+    gap: 12px;
+    align-items: center;
+}
+
+.calculator-field-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.calculator-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.calculator-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.calculator-actions .btn {
+    min-width: 120px;
+}
+
+@media (max-width: 768px) {
+    .calculator-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .calculator-actions {
+        justify-content: center;
+    }
+
+    .calculator-actions .btn {
+        flex: 1;
+    }
+}
 ');
 ?>
 
@@ -475,6 +542,42 @@ $this->registerCss('
             </div>
         </div>
 
+        <!-- Simple Calculator -->
+        <div class="calculator-section">
+            <div class="calculator-container">
+                <h3 class="calculator-title">Calculadora Rápida</h3>
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label for="calc-currency" class="form-label mb-1">Moneda</label>
+                        <select id="calc-currency" class="form-select">
+                            <option value="USDT">USDT (Paralelo/Binance)</option>
+                            <option value="BCV">BCV (Tasa Oficial)</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="calculator-field">
+                            <label for="calc-ves" class="calculator-field-label">Monto en VES</label>
+                            <input type="number" step="0.01" min="0" id="calc-ves" class="form-control" placeholder="0,00">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="calculator-field">
+                            <label for="calc-foreign" class="calculator-field-label">Monto en USDT/BCV</label>
+                            <input type="number" step="0.0001" min="0" id="calc-foreign" class="form-control" placeholder="0,0000">
+                        </div>
+                    </div>
+                </div>
+                <div class="calculator-actions">
+                    <button type="button" id="calc-swap" class="btn btn-outline-secondary btn-sm">
+                        Alternar Montos
+                    </button>
+                    <button type="button" id="calc-clear" class="btn btn-outline-danger btn-sm">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Chart Section -->
         <div class="chart-section">
             <div class="chart-container">
@@ -514,6 +617,57 @@ let previousPrices = {
     oficial: null,
     paralelo: null
 };
+
+// Tasas numéricas actuales para la calculadora
+let currentNumericRates = {
+    oficial: null,
+    paralelo: null
+};
+
+// Referencias a elementos de la calculadora
+const calcCurrencySelect = document.getElementById('calc-currency');
+const calcVesInput = document.getElementById('calc-ves');
+const calcForeignInput = document.getElementById('calc-foreign');
+const calcSwapBtn = document.getElementById('calc-swap');
+const calcClearBtn = document.getElementById('calc-clear');
+
+let calcDirection = 'ves-to-foreign'; // o 'foreign-to-ves'
+let calcIsUpdating = false;
+
+// Parsear precio con formato venezolano (puntos miles, coma decimal) a float
+function parsePriceToFloat(price) {
+    if (!price) return null;
+    const normalized = price.toString().replace(/\./g, '').replace(',', '.');
+    const value = parseFloat(normalized);
+    return isNaN(value) ? null : value;
+}
+
+function getSelectedRateValue() {
+    if (!calcCurrencySelect) return null;
+    const sel = calcCurrencySelect.value; // 'USDT' o 'BCV'
+    const type = sel === 'BCV' ? 'oficial' : 'paralelo';
+    return currentNumericRates[type];
+}
+
+function recalcFromVES() {
+    if (!calcVesInput || !calcForeignInput) return;
+    const rate = getSelectedRateValue();
+    const ves = parseFloat(calcVesInput.value);
+    if (!rate || isNaN(ves)) return;
+    calcIsUpdating = true;
+    calcForeignInput.value = (ves / rate).toFixed(4);
+    calcIsUpdating = false;
+}
+
+function recalcFromForeign() {
+    if (!calcVesInput || !calcForeignInput) return;
+    const rate = getSelectedRateValue();
+    const foreign = parseFloat(calcForeignInput.value);
+    if (!rate || isNaN(foreign)) return;
+    calcIsUpdating = true;
+    calcVesInput.value = (foreign * rate).toFixed(2);
+    calcIsUpdating = false;
+}
 
 // Chart instance
 let ratesChart = null;
@@ -591,6 +745,9 @@ function updateRates() {
                         
                         // Actualizar precio previo
                         previousPrices[rateType] = rate.precio;
+
+                        // Guardar valor numérico para la calculadora
+                        currentNumericRates[rateType] = parsePriceToFloat(rate.precio);
                     }
                     
                     if (metaContainer) {
@@ -825,6 +982,55 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         loadHistoricalData(period);
     });
 });
+
+// Eventos de la calculadora
+if (calcVesInput && calcForeignInput) {
+    calcVesInput.addEventListener('input', () => {
+        if (calcIsUpdating) return;
+        calcDirection = 'ves-to-foreign';
+        recalcFromVES();
+    });
+
+    calcForeignInput.addEventListener('input', () => {
+        if (calcIsUpdating) return;
+        calcDirection = 'foreign-to-ves';
+        recalcFromForeign();
+    });
+}
+
+if (calcCurrencySelect) {
+    calcCurrencySelect.addEventListener('change', () => {
+        // Recalcular según el último sentido utilizado
+        if (calcDirection === 'ves-to-foreign') {
+            recalcFromVES();
+        } else {
+            recalcFromForeign();
+        }
+    });
+}
+
+if (calcSwapBtn && calcVesInput && calcForeignInput) {
+    calcSwapBtn.addEventListener('click', () => {
+        calcIsUpdating = true;
+        const tmp = calcVesInput.value;
+        calcVesInput.value = calcForeignInput.value;
+        calcForeignInput.value = tmp;
+        calcIsUpdating = false;
+
+        calcDirection = calcDirection === 'ves-to-foreign'
+            ? 'foreign-to-ves'
+            : 'ves-to-foreign';
+    });
+}
+
+if (calcClearBtn && calcVesInput && calcForeignInput) {
+    calcClearBtn.addEventListener('click', () => {
+        calcIsUpdating = true;
+        calcVesInput.value = '';
+        calcForeignInput.value = '';
+        calcIsUpdating = false;
+    });
+}
 
 // Actualizar inmediatamente al cargar la página
 updateRates();
