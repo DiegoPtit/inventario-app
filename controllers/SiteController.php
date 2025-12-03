@@ -408,30 +408,109 @@ class SiteController extends Controller
                 ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
                 ->orderBy(['created_at' => SORT_DESC])
                 ->one();
+            
+            // Obtener precios de ayer (hace 24 horas)
+            $yesterday = new \DateTime();
+            $yesterday->modify('-24 hours');
+            $yesterdayStr = $yesterday->format('Y-m-d H:i:s');
+            
+            $precioOficialAyer = HistoricoPreciosDolar::find()
+                ->where(['tipo' => HistoricoPreciosDolar::TIPO_OFICIAL])
+                ->andWhere(['<=', 'created_at', $yesterdayStr])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
+            
+            $precioParaleloAyer = HistoricoPreciosDolar::find()
+                ->where(['tipo' => HistoricoPreciosDolar::TIPO_PARALELO])
+                ->andWhere(['<=', 'created_at', $yesterdayStr])
+                ->orderBy(['created_at' => SORT_DESC])
+                ->one();
 
             $precios = [];
 
             if ($precioOficial) {
-                $precios[] = [
+                // Crear DateTime con zona horaria de Venezuela para timestamp correcto
+                $dateTimeOficial = new \DateTime($precioOficial->created_at, new \DateTimeZone('America/Caracas'));
+                
+                $precioOficialData = [
                     'precio' => number_format($precioOficial->precio_ves, 2, ',', '.'),
+                    'precio_raw' => floatval($precioOficial->precio_ves),
                     'tipo' => $precioOficial->displayTipo(),
                     'class' => 'oficial',
-                    'icon' => 'bank'
+                    'icon' => 'bank',
+                    'timestamp' => $dateTimeOficial->getTimestamp() // Timestamp Unix correcto
                 ];
+                
+                // Agregar información de comparación con ayer si existe
+                if ($precioOficialAyer) {
+                    $precioAyer = floatval($precioOficialAyer->precio_ves);
+                    $precioHoy = floatval($precioOficial->precio_ves);
+                    $diferencia = $precioHoy - $precioAyer;
+                    $porcentaje = ($precioAyer > 0) ? (($diferencia / $precioAyer) * 100) : 0;
+                    
+                    $precioOficialData['ayer'] = [
+                        'precio' => $precioAyer,
+                        'diferencia' => $diferencia,
+                        'porcentaje' => round($porcentaje, 2),
+                        'fecha' => (new \DateTime($precioOficialAyer->created_at))->format('d/m/Y')
+                    ];
+                }
+                
+                $precios[] = $precioOficialData;
             }
 
             if ($precioParalelo) {
-                $precios[] = [
+                // Crear DateTime con zona horaria de Venezuela para timestamp correcto
+                $dateTimeParalelo = new \DateTime($precioParalelo->created_at, new \DateTimeZone('America/Caracas'));
+                
+                $precioParaleloData = [
                     'precio' => number_format($precioParalelo->precio_ves, 2, ',', '.'),
+                    'precio_raw' => floatval($precioParalelo->precio_ves),
                     'tipo' => $precioParalelo->displayTipo(),
                     'class' => 'paralelo',
-                    'icon' => 'currency-exchange'
+                    'icon' => 'currency-exchange',
+                    'timestamp' => $dateTimeParalelo->getTimestamp() // Timestamp Unix correcto
+                ];
+                
+                // Agregar información de comparación con ayer si existe
+                if ($precioParaleloAyer) {
+                    $precioAyer = floatval($precioParaleloAyer->precio_ves);
+                    $precioHoy = floatval($precioParalelo->precio_ves);
+                    $diferencia = $precioHoy - $precioAyer;
+                    $porcentaje = ($precioAyer > 0) ? (($diferencia / $precioAyer) * 100) : 0;
+                    
+                    $precioParaleloData['ayer'] = [
+                        'precio' => $precioAyer,
+                        'diferencia' => $diferencia,
+                        'porcentaje' => round($porcentaje, 2),
+                        'fecha' => (new \DateTime($precioParaleloAyer->created_at))->format('d/m/Y')
+                    ];
+                }
+                
+                $precios[] = $precioParaleloData;
+            }
+            
+            // Calcular diferencial cambiario
+            $diferencial = null;
+            if ($precioOficial && $precioParalelo) {
+                $precioOficialVal = floatval($precioOficial->precio_ves);
+                $precioParaleloVal = floatval($precioParalelo->precio_ves);
+                
+                $diferenciaBs = $precioParaleloVal - $precioOficialVal;
+                $diferenciaUSD = ($precioOficialVal > 0) ? (1 / $precioOficialVal - 1 / $precioParaleloVal) : 0;
+                $diferencialPorcentaje = ($precioOficialVal > 0) ? (($diferenciaBs / $precioOficialVal) * 100) : 0;
+                
+                $diferencial = [
+                    'diferencia_bs' => round($diferenciaBs, 2),
+                    'diferencia_usd' => round($diferenciaUSD, 4),
+                    'porcentaje' => round($diferencialPorcentaje, 2)
                 ];
             }
 
             return [
                 'success' => true,
-                'data' => $precios
+                'data' => $precios,
+                'diferencial' => $diferencial
             ];
 
         } catch (\Exception $e) {

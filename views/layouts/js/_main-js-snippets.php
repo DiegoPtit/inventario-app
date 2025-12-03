@@ -8,6 +8,7 @@ $csrfToken = Yii::$app->request->csrfToken;
 
 // URLs para HEREDOC
 $urlUpdateParallel = \yii\helpers\Url::to(['site/update-parallel-dollar-rate']);
+$urlUpdateDollarRate = \yii\helpers\Url::to(['site/update-dollar-rate']);
 $urlGetDataCierre = \yii\helpers\Url::to(['historico-inventarios/get-data-cierre']);
 $urlRegistrarCierre = \yii\helpers\Url::to(['historico-inventarios/registrar-cierre']);
 $urlIndexInventarios = \yii\helpers\Url::to(['historico-inventarios/index']);
@@ -28,9 +29,66 @@ $loadEventListener = (!$userIsGuest && $userIdentity) ? "
     });" : "";
 
 $this->registerJs(<<<JS
-// JavaScript code goes here
+// ============================================================
+// ACTUALIZACIÓN AUTOMÁTICA DEL PRECIO OFICIAL DEL DÓLAR (BCV)
+// ============================================================
 
+// Función para actualizar el precio del BCV desde la API
+function updateBcvPrice() {
+    const userIsGuest = {$userIsGuestJS};
+    
+    // Solo actualizar si el usuario no es invitado
+    if (userIsGuest) {
+        return;
+    }
+    
+    console.log('[BCV] Actualizando precio oficial del dólar...');
+    
+    fetch('{$urlUpdateDollarRate}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: '{$csrfParam}={$csrfToken}'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('[BCV] Precio oficial consultado:', data.data.precio, 'VES');
+            
+            // Si hubo un cambio de precio, actualizar el widget
+            if (data.data.actualizado) {
+                console.log('[BCV] ¡Nuevo precio detectado! Actualizando widget...');
+                
+                // Actualizar el widget si existe
+                if (window.DollarPriceWidget && typeof window.DollarPriceWidget.fetchPrices === 'function') {
+                    window.DollarPriceWidget.fetchPrices();
+                }
+            } else {
+                console.log('[BCV] El precio no ha cambiado');
+            }
+        } else {
+            console.warn('[BCV] No se pudo actualizar el precio:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('[BCV] Error al actualizar precio oficial:', error);
+    });
+}
 
+// Ejecutar actualización al cargar la página
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        updateBcvPrice();
+    }, 2000); // Esperar 2 segundos después de cargar la página
+});
+
+// Ejecutar actualización cada 15 minutos (900000 ms)
+setInterval(function() {
+    updateBcvPrice();
+}, 900000); // 15 minutos
+
+console.log('[BCV] Sistema de actualización automática inicializado (cada 15 minutos)');
 
 JS
 );
