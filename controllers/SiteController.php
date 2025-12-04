@@ -575,6 +575,10 @@ class SiteController extends Controller
                 ->orderBy(['created_at' => SORT_DESC])
                 ->one();
 
+            // ============================================================
+            // ENDPOINT DESACTIVADO: Los datos se reciben pero NO se guardan en la DB
+            // ============================================================
+            /*
             // SIEMPRE guardar el precio en el histórico (cada 15 minutos, sin importar si cambió o no)
             $historicoPrecio = new HistoricoPreciosDolar();
             $historicoPrecio->precio_ves = $nuevoPrecio;
@@ -584,14 +588,16 @@ class SiteController extends Controller
             if (!$historicoPrecio->save()) {
                 throw new \Exception('Error al guardar el nuevo precio: ' . implode(', ', $historicoPrecio->getFirstErrors()));
             }
+            */
 
             return [
                 'success' => true,
-                'message' => 'Precio oficial actualizado correctamente',
+                'message' => 'Datos recibidos correctamente (endpoint desactivado - no se guardó en DB)',
                 'data' => [
                     'precio' => number_format($nuevoPrecio, 2, ',', '.'),
                     'fecha' => $data['date'] ?? date('Y-m-d'),
-                    'actualizado' => $ultimoPrecio ? ($ultimoPrecio->precio_ves != $nuevoPrecio) : true
+                    'actualizado' => $ultimoPrecio ? ($ultimoPrecio->precio_ves != $nuevoPrecio) : true,
+                    'guardado' => false
                 ]
             ];
 
@@ -1094,7 +1100,7 @@ class SiteController extends Controller
     }
 
     /**
-     * AJAX: Update BCV official dollar rate from bdv-microservice
+     * AJAX: Update BCV official dollar rate from bcv-microservice
      * 
      * @return Response
      */
@@ -1119,7 +1125,7 @@ class SiteController extends Controller
                 $data = Yii::$app->request->post();
             }
             
-            $valorPonderacion = $data['valorponderacion'] ?? null;
+            $valorPonderacion = $data['rate'] ?? null;
 
             // Log de datos recibidos
             Yii::info("[{$requestId}] Datos recibidos: " . json_encode($data, JSON_UNESCAPED_UNICODE), __METHOD__);
