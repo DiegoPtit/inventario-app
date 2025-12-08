@@ -946,6 +946,60 @@ class ProductosController extends Controller
     }
 
     /**
+     * Retorna todos los productos con información completa en formato JSON
+     * Incluye: datos del producto, categoría, y stock total de todas las ubicaciones
+     * @return array JSON response
+     */
+    public function actionGetProductosAll()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        // Obtener todos los productos con sus relaciones
+        $productos = Productos::find()
+            ->with(['categoria', 'stocks'])
+            ->all();
+        
+        $result = [];
+        
+        foreach ($productos as $producto) {
+            // Calcular stock total sumando todas las ubicaciones
+            $stockTotal = 0;
+            foreach ($producto->stocks as $stock) {
+                $stockTotal += $stock->cantidad;
+            }
+            
+            // Redondear contenido_neto a 2 decimales
+            $contenidoNetoRedondeado = $producto->contenido_neto 
+                ? number_format((float)$producto->contenido_neto, 2, '.', '') 
+                : null;
+            
+            // Concatenar contenido_neto con unidad_medida
+            $contenidoNetoConUnidad = $contenidoNetoRedondeado && $producto->unidad_medida
+                ? $contenidoNetoRedondeado . ' ' . $producto->unidad_medida
+                : ($contenidoNetoRedondeado ?: ($producto->unidad_medida ?: null));
+            
+            // Obtener título de categoría
+            $tituloCategoria = $producto->categoria ? $producto->categoria->titulo : null;
+            
+            $result[] = [
+                'marca' => $producto->marca,
+                'modelo' => $producto->modelo,
+                'color' => $producto->color,
+                'descripcion' => $producto->descripcion,
+                'cont_neto' => $contenidoNetoConUnidad,
+                'costo' => $producto->costo,
+                'precio_venta' => $producto->precio_venta,
+                'codigo_barra' => $producto->codigo_barra,
+                'id_categoria' => $producto->id_categoria,
+                'titulo_categoria' => $tituloCategoria,
+                'stock' => $stockTotal,
+            ];
+        }
+        
+        return $result;
+    }
+
+    /**
 
      * Finds the Productos model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
