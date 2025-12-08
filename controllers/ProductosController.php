@@ -1000,6 +1000,109 @@ class ProductosController extends Controller
     }
 
     /**
+     * Retorna información de un producto especifico en formato JSON
+     * @param string $id ID del producto
+     * @return array JSON response
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionGetProducto($id)
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        
+        // Buscar el producto con sus relaciones
+        $producto = Productos::find()
+            ->where(['id' => $id])
+            ->with(['categoria', 'stocks'])
+            ->one();
+            
+        if (!$producto) {
+            throw new NotFoundHttpException('El producto no existe.');
+        }
+        
+        // Calcular stock total sumando todas las ubicaciones
+        $stockTotal = 0;
+        if (!empty($producto->stocks)) {
+            foreach ($producto->stocks as $stock) {
+                $stockTotal += $stock->cantidad;
+            }
+        }
+        
+        // Redondear contenido_neto a 2 decimales
+        $contenidoNetoRedondeado = $producto->contenido_neto 
+            ? number_format((float)$producto->contenido_neto, 2, '.', '') 
+            : null;
+        
+        // Concatenar contenido_neto con unidad_medida
+        $contenidoNetoConUnidad = $contenidoNetoRedondeado && $producto->unidad_medida
+            ? $contenidoNetoRedondeado . ' ' . $producto->unidad_medida
+            : ($contenidoNetoRedondeado ?: ($producto->unidad_medida ?: null));
+        
+        // Obtener título de categoría
+        $tituloCategoria = $producto->categoria ? $producto->categoria->titulo : null;
+        
+        return [
+            'marca' => $producto->marca,
+            'modelo' => $producto->modelo,
+            'color' => $producto->color,
+            'descripcion' => $producto->descripcion,
+            'cont_neto' => $contenidoNetoConUnidad,
+            'costo' => $producto->costo,
+            'precio_venta' => $producto->precio_venta,
+            'codigo_barra' => $producto->codigo_barra,
+            'id_categoria' => $producto->id_categoria,
+            'titulo_categoria' => $tituloCategoria,
+            'stock' => $stockTotal,
+        ];
+    }
+
+    /**
+     * Sirve la imagen del producto según el índice o devuelve la lista de imágenes
+     * @param string $id ID del producto
+     * @param int|null $photoIndex Índice de la foto a servir
+     * @return mixed JSON response o File stream
+     * @throws NotFoundHttpException if the model cannot be found
+     */
+    public function actionServeProductImage($id, $photoIndex = null)
+    {
+        $producto = $this->findModel($id);
+        
+        $fotosArray = [];
+        if (!empty($producto->fotos)) {
+            $fotosArray = json_decode($producto->fotos, true);
+            if (!is_array($fotosArray)) {
+                $fotosArray = [];
+            }
+        }
+        
+        // MODO 1: Si no se pasa photoIndex, retornar lista y conteo
+        if ($photoIndex === null) {
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'fotos' => $fotosArray,
+                'count' => count($fotosArray)
+            ];
+        }
+        
+        // MODO 2: Servir la imagen específica
+        $index = (int)$photoIndex;
+        
+        if (!isset($fotosArray[$index])) {
+            throw new NotFoundHttpException('La imagen solicitada no existe.');
+        }
+        
+        $imagePath = $fotosArray[$index];
+        // Construir ruta absoluta. 
+        // Asumiendo que la ruta guardada es relativa a webroot (ej: uploads/archivo.jpg)
+        $fullPath = Yii::getAlias('@webroot') . DIRECTORY_SEPARATOR . $imagePath;
+        
+        if (!file_exists($fullPath)) {
+            throw new NotFoundHttpException('El archivo de imagen no se encuentra en el servidor.');
+        }
+        
+        return Yii::$app->response->sendFile($fullPath, null, ['inline' => true]);
+    }
+
+    /**
 
      * Finds the Productos model based on its primary key value.
      * If the model is not found, a 404 HTTP exception will be thrown.
