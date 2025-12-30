@@ -402,7 +402,7 @@ $this->title = 'Reporte de Inventario';
                 
                 <!-- Footer de la agrupación -->
                 <div class="footer-seccion">
-                    <h3>Totales del Almacén</h3>
+                    <h3><?= ($tipo === 'general') ? 'Totales Generales' : 'Totales del Almacén' ?></h3>
                     <div class="footer-totales">
                         <div class="total-item">
                             <div class="total-label">Total Costo</div>

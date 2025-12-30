@@ -646,68 +646,136 @@ class ProductosController extends Controller
         } else {
             // Reporte de inventario (lógica existente)
             
-            // Obtener los datos según el tipo de reporte
-            if ($tipo === 'por-lugar' && !empty($idLugar)) {
-                // Reporte por lugar específico
-                $lugares = [\app\models\Lugares::findOne($idLugar)];
-                if (!$lugares[0]) {
-                    throw new NotFoundHttpException('El almacén no existe.');
-                }
-            } else {
-                // Reporte general (todos los lugares)
-                $lugares = \app\models\Lugares::find()->orderBy(['nombre' => SORT_ASC])->all();
-            }
-            
-            // Preparar datos del reporte agrupados por lugar
-            
-            foreach ($lugares as $lugar) {
-                // Obtener productos que tienen stock en este lugar
+            // Determinar si es reporte general o por lugar
+            if ($tipo === 'general') {
+                // Reporte General: Listar todos los productos unificados (suma de stocks de todos los almacenes)
+                
+                // Buscar stock > 0 en cualquier lugar
                 $stocks = Stock::find()
-                    ->where(['id_lugar' => $lugar->id])
-                    ->andWhere(['>', 'cantidad', 0])
+                    ->where(['>', 'cantidad', 0])
                     ->with('producto')
                     ->all();
                 
-                if (empty($stocks)) {
-                    continue; // Saltar lugares sin stock
-                }
-                
-                $productos = [];
+                $productosMap = [];
                 $totalCosto = 0;
                 $totalPrecioVenta = 0;
                 $totalCantidad = 0;
                 
                 foreach ($stocks as $stock) {
                     $producto = $stock->producto;
-                    if (!$producto) {
-                        continue;
+                    if (!$producto) continue;
+                    
+                    $key = $producto->id;
+                    
+                    if (!isset($productosMap[$key])) {
+                        $productosMap[$key] = [
+                            'marca' => $producto->marca,
+                            'modelo' => $producto->modelo,
+                            'color' => $producto->color,
+                            'contenido_neto' => $producto->contenido_neto,
+                            'unidad_medida' => $producto->unidad_medida,
+                            'costo' => $producto->costo,
+                            'precio_venta' => $producto->precio_venta,
+                            'cantidad' => 0,
+                            'subtotal_costo' => 0,
+                            'subtotal_venta' => 0,
+                        ];
                     }
                     
-                    $productos[] = [
-                        'marca' => $producto->marca,
-                        'modelo' => $producto->modelo,
-                        'color' => $producto->color,
-                        'contenido_neto' => $producto->contenido_neto,
-                        'unidad_medida' => $producto->unidad_medida,
-                        'costo' => $producto->costo,
-                        'precio_venta' => $producto->precio_venta,
-                        'cantidad' => $stock->cantidad,
-                        'subtotal_costo' => $producto->costo * $stock->cantidad,
-                        'subtotal_venta' => $producto->precio_venta * $stock->cantidad,
-                    ];
+                    $productosMap[$key]['cantidad'] += $stock->cantidad;
+                    $productosMap[$key]['subtotal_costo'] += $producto->costo * $stock->cantidad;
+                    $productosMap[$key]['subtotal_venta'] += $producto->precio_venta * $stock->cantidad;
                     
                     $totalCosto += $producto->costo * $stock->cantidad;
                     $totalPrecioVenta += $producto->precio_venta * $stock->cantidad;
                     $totalCantidad += $stock->cantidad;
                 }
                 
-                $datosReporte[] = [
-                    'lugar' => $lugar,
-                    'productos' => $productos,
-                    'total_costo' => $totalCosto,
-                    'total_precio_venta' => $totalPrecioVenta,
-                    'total_cantidad' => $totalCantidad,
-                ];
+                // Ordenar por nombre del producto
+                usort($productosMap, function($a, $b) {
+                    $nameA = trim(implode(' ', [$a['marca'], $a['modelo'], $a['color']]));
+                    $nameB = trim(implode(' ', [$b['marca'], $b['modelo'], $b['color']]));
+                    return strcasecmp($nameA, $nameB);
+                });
+                
+                // Crear un objeto lugar ficticio para mantener compatibilidad con la vista
+                $lugarGeneral = new \stdClass();
+                $lugarGeneral->nombre = 'Inventario Global (Todos los Almacenes)';
+                
+                if (!empty($productosMap)) {
+                    $datosReporte[] = [
+                        'lugar' => $lugarGeneral,
+                        'productos' => $productosMap, // array_values no es estrictamente necesario si foreach itera valores, pero es mejor
+                        'total_costo' => $totalCosto,
+                        'total_precio_venta' => $totalPrecioVenta,
+                        'total_cantidad' => $totalCantidad,
+                    ];
+                }
+                
+            } else {
+                // Reporte Por Lugar (o fallback anterior)
+                
+                if ($tipo === 'por-lugar' && !empty($idLugar)) {
+                    // Reporte por lugar específico
+                    $lugares = [\app\models\Lugares::findOne($idLugar)];
+                    if (!$lugares[0]) {
+                        throw new NotFoundHttpException('El almacén no existe.');
+                    }
+                } else {
+                    // Si por alguna razón cae aquí y no es general, listamos todos los lugares separados
+                    $lugares = \app\models\Lugares::find()->orderBy(['nombre' => SORT_ASC])->all();
+                }
+                
+                // Preparar datos del reporte agrupados por lugar
+                foreach ($lugares as $lugar) {
+                    // Obtener productos que tienen stock en este lugar
+                    $stocks = Stock::find()
+                        ->where(['id_lugar' => $lugar->id])
+                        ->andWhere(['>', 'cantidad', 0])
+                        ->with('producto')
+                        ->all();
+                    
+                    if (empty($stocks)) {
+                        continue; // Saltar lugares sin stock
+                    }
+                    
+                    $productos = [];
+                    $totalCosto = 0;
+                    $totalPrecioVenta = 0;
+                    $totalCantidad = 0;
+                    
+                    foreach ($stocks as $stock) {
+                        $producto = $stock->producto;
+                        if (!$producto) {
+                            continue;
+                        }
+                        
+                        $productos[] = [
+                            'marca' => $producto->marca,
+                            'modelo' => $producto->modelo,
+                            'color' => $producto->color,
+                            'contenido_neto' => $producto->contenido_neto,
+                            'unidad_medida' => $producto->unidad_medida,
+                            'costo' => $producto->costo,
+                            'precio_venta' => $producto->precio_venta,
+                            'cantidad' => $stock->cantidad,
+                            'subtotal_costo' => $producto->costo * $stock->cantidad,
+                            'subtotal_venta' => $producto->precio_venta * $stock->cantidad,
+                        ];
+                        
+                        $totalCosto += $producto->costo * $stock->cantidad;
+                        $totalPrecioVenta += $producto->precio_venta * $stock->cantidad;
+                        $totalCantidad += $stock->cantidad;
+                    }
+                    
+                    $datosReporte[] = [
+                        'lugar' => $lugar,
+                        'productos' => $productos,
+                        'total_costo' => $totalCosto,
+                        'total_precio_venta' => $totalPrecioVenta,
+                        'total_cantidad' => $totalCantidad,
+                    ];
+                }
             }
         }
         
