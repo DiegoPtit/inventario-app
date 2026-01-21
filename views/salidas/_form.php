@@ -1005,6 +1005,20 @@ if (btnSeleccionarProductoDescarte) {
                 document.getElementById('form-producto').value = producto.id;
                 document.getElementById('form-lugar-origen').value = stock.id_lugar;
                 
+                // Actualizar el select de ubicación con la ubicación seleccionada
+                const ubicacionSelect = document.getElementById('ubicacion-descarte');
+                ubicacionSelect.innerHTML = '<option value="">-- Selecciona una ubicación --</option>';
+                const option = new Option(
+                    stock.lugar_nombre + ' (' + stock.cantidad + ' unidades)',
+                    stock.id_lugar
+                );
+                option.dataset.cantidad = stock.cantidad;
+                option.selected = true;
+                ubicacionSelect.add(option);
+                
+                // Mostrar el grupo de ubicación
+                document.getElementById('ubicacion-descarte-group').style.display = 'block';
+                
                 // Mostrar información de stock
                 document.getElementById('stock-disponible-descarte').textContent = stock.cantidad || 0;
                 document.getElementById('stock-info-descarte').style.display = 'block';
